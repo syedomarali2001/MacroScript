@@ -1,0 +1,491 @@
+MACROSCRIPT - VERSION 6 OVERVIEW
+================================
+Completion date: 2026-11-06
+Version status: Forecasting research and final methodological audit complete.
+                NOT approved for reliable live recession-probability forecasts.
+
+ONE-SENTENCE SUMMARY
+--------------------
+V6 tested whether the historical warning indicators developed in V5 could
+produce reliable US recession-onset probabilities at 3-, 6-, and 12-month
+horizons. Multiple models, time-ordered tests, alternative economic features,
+ALFRED sensitivity checks, expanding-window refits, calibration and vintage-
+origin training revealed some historical predictive signal but insufficient
+robustness for deployment; the modelling work is archived and V7 becomes a
+transparent economic-monitoring and historical-research application.
+
+
+1. WHY WE BUILT V6
+------------------
+V1-V4 established economic-data retrieval, ALFRED historical vintages, quality
+checking and descriptive economic features. V5 added recession-onset targets,
+exploratory Treasury/housing/claims/credit warning-rule research, and an
+approximately 1999-2024 point-in-time feature dataset.
+
+V5 did NOT produce independently validated recession probabilities. Its
+historical 8/8 rule detections used periods also examined when developing the
+rules. V6 therefore asked:
+  - Can probabilities beat a simple historical recession-event-rate baseline?
+  - Can statistical or ML models improve on the V5 Treasury/housing rule?
+  - Are 3/6/12-month probabilities well ranked AND well calibrated?
+  - Does performance survive chronological training and ALFRED/PIT inputs?
+  - Do interest-rate, credit, lagged or duration indicators help?
+  - Are gains stable across historical decades and recent expansions?
+  - Does training on origin-vintage observations change the conclusion?
+
+A GOOD OUTCOME WAS AN HONEST MODEL VALIDATION DECISION, INCLUDING REJECTION
+OF MODELS THAT DID NOT DEMONSTRATE SUFFICIENT RELIABILITY. V6 does not claim
+any investment return, trading signal or dependable real-time recession call.
+
+
+2. OUTCOME, INPUT DATA AND CHRONOLOGY
+-------------------------------------
+TARGET:
+  NBER-dated US recession onset, represented by retrospective FRED USREC
+  monthly labels. Predict an onset within months M+1 through M+3, M+6 or M+12.
+  Recession months are excluded from onset-forecast evaluation. USREC is an
+  outcome/evaluation label, NEVER an economic predictor. Future outcome labels
+  must not be treated as known before they mature or are announced.
+
+ORIGINAL FIVE FEATURES / SIX UNDERLYING MONTHLY SERIES:
+  unemployment_sahm_pp          calculated from UNRATE
+  payroll_growth_12m_pct        PAYEMS
+  industrial_growth_12m_pct     INDPRO
+  permits_growth_12m_pct        PERMIT
+  treasury_spread_pp            GS10 - TB3MS
+
+  Treasury spread values are percentage POINTS. Employment, production and
+  building-permit growth are percentage changes. The monthly GS10-TB3MS
+  proxy is not identical to the daily FRED T10Y3M series.
+
+MAIN DATASET SOURCES:
+  v5_research_revised.csv       756 monthly records, 1962-01 to 2024-12;
+                                today's REVISED historical features.
+  v5_pit_full_rows.csv          304 historical month-end ALFRED feature
+                                snapshots, 1999-09 to 2024-12.
+  v6_model_revised.csv          671 eligible revised expansion-month rows
+                                after V6 exclusions and target requirements.
+  v6_model_pit.csv              276 eligible historical PIT expansion-month
+                                rows after quality and target requirements.
+
+The forecasting experiment initially used fixed chronological boundaries:
+  Training:    through 1988-12 (modelled training sample starts in 1962).
+  Validation:  1990-01 through 2003-12.
+  Test:        2005-01 through 2024-12.
+  Purge gaps:  1989 and 2004 protect against overlapping forecast horizons.
+  Actual model-specific sample counts can vary with data coverage.
+
+IMPORTANT: 'Chronologically separated' is NOT synonymous with 'untouched'.
+The 2005-2024 period had already been examined in V5 and during V6. Later
+candidate exploration on that period introduces selection bias. The ALFRED
+feature-input comparison is stronger than revised-only evaluation but still
+is NOT a complete contemporaneous training/release-calendar replay.
+
+
+3. THE EXPERIMENTS AND WHAT THEY TAUGHT US
+-----------------------------------------
+STEP 1 - Prepare audited modelling tables (model_data.py)
+  - Created matched revised and PIT datasets with explicit source, month,
+    as-of date and train/validation/test split metadata.
+  - Kept only eligible expansion-month observations with complete targets.
+  - Enforced nested 3/6/12-month labels and quality requirements for PIT.
+  - Protected the intended train/validation/test boundaries with purge gaps.
+
+STEP 2 - Fixed logistic regression and validation (forecast.py)
+  - Fit three standardized, regularized logistic classifiers on training
+    observations only, with horizon probabilities projected to nondecreasing
+    3/6/12-month values where required.
+  - Estimated baseline event probabilities and V5-rule conditional rates
+    using training data rather than using future test prevalence.
+  - The five-feature logistic model looked strong in validation, but this
+    did NOT guarantee stable later performance.
+
+STEP 3 - Frozen test and ALFRED feature-input audit (evaluate.py)
+  - Evaluated the existing fitted models on matched 2005-2024 revised and
+    PIT observations, reporting Brier score, log loss, AUC and warnings.
+  - The encouraging validation result deteriorated substantially. This was
+    a major reason NOT to deploy the original logistic model.
+  - Model training had used revised historical predictors; replacing the
+    test inputs with PIT inputs did not turn this into a fully PIT-trained
+    historical backtest.
+
+STEP 4/5 - Expanding-window logistic stress tests
+  Files: walkforward.py, walkforward_test.py
+  - Refit models chronologically using only labels judged mature under an
+    initial 18-month proxy (12-month target plus a six-month buffer).
+  - Monthly/expanding training did not remove instability or recent false
+    alerts. That delay was an APPROXIMATION, not verified NBER announcement
+    availability for each event.
+
+STEP 6 - Alternative statistical models (alternatives.py)
+  - Compared a Treasury-only probit, Treasury/housing regularized logistic,
+    an early-trained two-feature control and chronological calibration.
+  - Some alternatives were less poor than the original five-feature logistic
+    in the later historical sample, but did not reliably beat the base-rate
+    benchmark on the targeted 12-month PIT comparison.
+  - Calibration could worsen losses even if ranking/AUC stayed respectable.
+
+BROAD MODEL COMPARISON (model_experiments.py)
+  - Compared logistic L2, elastic-net logistic, Random Forest, gradient
+    boosting and simplified pooled hazard-style models across two-feature,
+    five-feature and lagged/duration-augmented feature groups.
+  - The five-feature Random Forest was much more stable than logistic, but
+    its PIT 12-month result was only roughly comparable to the simple base.
+  - Additional model complexity did not systematically outperform simple
+    baselines. Pooled overlapping monthly outcomes must not be interpreted
+    as independent recession events or formal coefficient inference.
+
+ROUND A - Chronological expanding / two-year refit stress test
+  File: research_rounds.py; outputs v6_roundA_*.csv/json
+  - Tested several selected model families under repeated historical refits.
+  - In this experiment, the five-feature models did not provide sufficient
+    stable 12-month PIT skill relative to a historical event-rate baseline.
+
+ROUND B - Additional economic indicators
+  File: research_rounds.py; outputs v6_roundB_*.csv/json
+  - Added GS1, FEDFUNDS, BAA and GS10, with predeclared lags, forming:
+      short_curve_pp    = GS1 - FEDFUNDS
+      funds_level_pp    = FEDFUNDS
+      baa_treasury_pp   = BAA - GS10
+  - Compared five-feature, seven-feature (add two rates), eight-feature
+    (rates plus credit) and selected logistic/credit-only additions.
+  - Interest-rate additions materially improved historical PIT test scores.
+    HOWEVER the favourable later-period candidates were examined after the
+    evaluation period was already known; selecting the best on that basis
+    is not independent model validation.
+  - The BAA-based PIT audit excludes three missing historical months in
+    2016-12, 2017-01 and 2017-02: the shared comparison has 217 months.
+
+ROUND C - Walk-forward Random Forest robustness
+  File: robustness_round_c.py; outputs v6_roundC_*.csv/json
+  - Compared the original five, seven rates and eight rates/credit features
+    under 18-month-maturity expanding training and two-year model refits.
+  - Checked early historical, validation and revised/PIT test intervals.
+  - Seven/eight-feature models had promising later-period ranking and
+    probability scores; both showed much more alarming behaviour in parts
+    of the earlier history and during 2022-2024.
+  - Published the comparison to the original frozen Round-B models; the
+    apparent winner depends on period and methodology.
+
+FINAL V6 AUDIT - Methodological closure (final_v6_audit.py)
+  Outputs: v6_final_audit/ and v6_final_* files
+  - Recomputed the Round-C walk-forward procedure with a more conservative
+    30-month label maturity proxy, rather than 18 months.
+  - Examined chronological intercept-only recalibration and an explicitly
+    fixed 50% shrinkage toward an expanding historical base rate.
+  - Assessed performance by era: 1976-88, 1990-2003, 2005-11,
+    2012-21 and 2022-24.
+  - Attempted vintage-origin training using each historical training row's
+    as-recorded ALFRED feature snapshot from 1999 onward.
+  - The origin-vintage training series is much shorter and NOT equivalent
+    to reconstructing a complete as-of training database at each refit.
+  - The final data have already been examined repeatedly. The final audit
+    is a methodological stress test, NOT a new unseen holdout.
+
+
+4. REPRODUCED KEY RESULTS
+------------------------
+METRIC DEFINITIONS:
+  Brier score = mean squared error of predicted event probabilities (lower
+  is better). Log loss also penalizes badly confident wrong probabilities.
+  ROC AUC evaluates ranking, not probability calibration. An alert threshold
+  of 20% was used for historical warning diagnostics; it is not a vetted
+  operational action cutoff. Monthly 3/6/12-month labels overlap heavily;
+  their row counts are NOT numbers of independent recession events.
+
+A. INITIAL FIVE-FEATURE LOGISTIC - 12-MONTH HORIZON
+  Fixed 1990-2003 revised validation (152 eligible months):
+    Historical base rate                 Brier 0.11183
+    V5 warning-conditioned probability  Brier 0.07270
+    Five-feature logistic               Brier 0.05529
+
+  Frozen 2005-2024 PIT test (220 eligible months):
+    Historical base rate                 Brier 0.10147
+    V5 warning-conditioned probability  Brier 0.09997
+    Five-feature logistic               Brier 0.15940
+
+  Conclusion: validation success did NOT reproduce in the later PIT period.
+
+B. BROAD FIVE-FEATURE RANDOM FOREST - 12-MONTH HORIZON
+  Broad-model PIT test (220 months):
+    Historical base rate                 Brier 0.10173
+    Five-feature Random Forest          Brier 0.10211
+  A model that barely matches the base should not be called a validated win.
+
+C. ROUND C WALK-FORWARD WITH 18-MONTH LABEL DELAY
+  2005-2024 PIT sample, 217 shared months, 12-month Brier:
+    Expanding historical base            0.10176
+    V5 warning-conditioned probability  0.10545
+    Five-feature RF walk-forward         0.11193
+    Seven-feature rates RF walk-forward  0.08863
+    Eight-feature all RF walk-forward    0.09159
+    Frozen seven-feature RF              0.08229
+    Frozen eight-feature RF              0.08069
+
+  Frozen eight-feature performance benefited from comparing choices after
+  the test interval had been examined. It must not be advertised as an
+  independently selected, verified winner.
+
+D. FINAL 30-MONTH-DELAY AUDIT - 12-MONTH HORIZON
+  2005-2024 PIT sample, 217 months, 24 POSITIVE MONTHLY LABELS but only
+  TWO distinct recession onsets (2008 and 2020). These 24 positive months
+  represent 12 pre-onset months per event, not 24 independent recessions.
+
+    Method                            Brier       Log loss
+    -------------------------------------------------------
+    Historical expanding base         0.10100       0.3584
+    V5 warning-conditioned prob.      0.10519       0.3421
+    Five-feature RF walk-forward      0.10920       0.3246
+    Seven-feature rates RF            0.08753       0.2640
+    Eight-feature rates+credit RF     0.08951       0.2745
+    Seven-feature chronological cal.  0.08914       0.2669
+    Seven-feature half-shrinkage      0.08614       0.2959
+
+  Seven-feature historical PIT ROC AUC: approximately 0.872.
+  Seven-feature Brier improvement relative to the expanding base:
+     1 - 0.08753/0.10100 = approximately 13.3%.
+  Chronological recalibration did not improve Brier/log loss. Fixed half-
+  shrinkage slightly improved Brier while worsening log loss; no robust
+  calibration fix emerged.
+
+E. ORIGIN-VINTAGE TRAINING (FINAL AUDIT)
+  Same 217-month PIT evaluation at 12 months:
+    Historical expanding base            Brier 0.10100
+    Five-feature origin-vintage RF       Brier 0.11496
+    Seven-feature origin-vintage RF      Brier 0.11927
+    Eight-feature origin-vintage RF      Brier 0.11898
+
+  None beat the base rate in this short-history experiment. However, this
+  cannot isolate data-revision effects: training starts around 1999 and is
+  drastically smaller. January 2005 origin-vintage refits can have as few
+  as 24 eligible training observations, making the chosen RF leaf size of
+  20 a severe restriction. Do NOT claim that vintage revisions alone caused
+  the degradation, or that this recreates a complete real-time backtest.
+
+F. HISTORICAL-ERA STABILITY (FINAL 30-MONTH AUDIT)
+  12-month Brier; early and validation use revised predictors; later uses PIT:
+
+    Method                   1976-88   1990-03   2005-24 PIT
+    -------------------------------------------------------
+    Historical base          0.16001   0.11373   0.10100
+    V5 conditional rule      0.10266   0.07295   0.10519
+    Five-feature RF          0.11746   0.06833   0.10920
+    Seven-feature RF         0.13527   0.07310   0.08753
+    Eight-feature RF         0.14289   0.07524   0.08951
+
+  The seven/eight-feature models were NOT consistently the best across eras.
+  During 1976-88, at the same 20% threshold, the 7-feature model flagged
+  77/110 negative months and the 8-feature model flagged 82/110 negative
+  months. Financial signal relationships and calibration are regime-sensitive.
+
+G. 2022-2024 FALSE WARNING DIAGNOSTIC (FINAL 30-MONTH AUDIT)
+  The PIT evaluation includes 36 expansion months with zero 12-month-onset
+  positives during 2022-2024. At the 12-month horizon:
+    Historical base:  average probability 14.9%, Brier 0.02224.
+    Seven-feature RF: average probability 35.5%, Brier 0.17358.
+    Eight-feature RF: average probability 34.1%, Brier 0.15572.
+    Both RF variants flagged 25/36 months at the 20% threshold.
+
+  These sustained warnings are a major reason the system is not considered
+  reliable as a present-day recession probability product.
+
+H. SIX-MONTH WARNING COMPARISON (FINAL 30-MONTH AUDIT)
+  2005-2024 PIT, fixed 20% threshold; only 2 distinct onsets:
+    V5 binary Treasury/housing rule: 1/2 detected, 42 false-warning months.
+    Seven-feature RF:              2/2 detected, 30 false-warning months.
+    Eight-feature RF:              2/2 detected, 20 false-warning months.
+
+  Historical warning improvement exists, but event counts are too small and
+  the period was repeatedly examined. The eight-feature 6-month result is
+  neither a guaranteed early-warning system nor a live-track-record claim.
+
+
+5. WHAT V6 PROVED, AND WHAT IT DID NOT
+-------------------------------------
+SUPPORTED RESEARCH FINDINGS:
+  - The interest-rate additions contain information that improved some
+    historical recession-onset probability scores and rankings.
+  - Separating training/validation/test chronologically is necessary but
+    insufficient if the same evaluation period is repeatedly used to choose
+    modelling ideas.
+  - Revisions, release timing, model-training data and model selection all
+    affect what a retrospective economic forecast appears to have known.
+  - Forecast ranking and calibrated probabilities are different objectives.
+  - Model performance and false-warning behaviour differ by economic regime.
+  - A simple honest benchmark can outperform complex models for important
+    periods. Failure to deploy is a legitimate model-risk decision.
+
+NOT SUPPORTED:
+  - Reliable or well-calibrated real-time 3/6/12-month recession probabilities.
+  - A complete point-in-time trained backtest all the way to 1962.
+  - An independent final test set unaffected by earlier exploratory research.
+  - Generalizable proof from two later-period recessions or overlapping months.
+  - An operational recession alert threshold, future accuracy guarantee,
+    investment alpha, stock-market crash prediction or profitable strategy.
+
+FINAL PRODUCT DECISION:
+  Do not present the experimental V6 probabilities as validated live output.
+  Archive the model experiments, manifests, cached source files, prediction
+  records and detailed research audits. Reuse only descriptive economic
+  features, robust data services and transparently labelled rule examples
+  in the V7 application.
+
+
+6. FILES, FOLDERS AND THEIR ROLES
+--------------------------------
+EXISTING BACKEND - RETAIN CANONICAL PRE-V6 COPIES FOR V7
+  config.py              Economic series definitions.
+  fred_client.py         FRED communication and observation metadata.
+  history.py             ALFRED as-of-date retrieval and Treasury fallbacks.
+  data_quality.py        History continuity/staleness checking.
+  data_loader.py         Present, Time Machine and revised Research data modes.
+  features.py            Pure economic feature calculations.
+  signals.py             Simple explanatory warning-rule logic (V5).
+
+V6 MODEL/RESEARCH SCRIPTS - ARCHIVE, NOT RUNTIME DEPENDENCIES FOR V7
+  model_data.py          Curated revised/PIT modelling matrix and splits.
+  forecast.py            Fixed logistic model and metrics.
+  evaluate.py            Frozen later-period evaluation and PIT audit.
+  walkforward.py         Expanding historical validation.
+  walkforward_test.py    Later PIT/revised expanding evaluation.
+  alternatives.py        Probit, two-feature controls and calibration.
+  model_experiments.py   Multi-family modelling comparisons.
+  research_rounds.py     Expanding-window and extra rates/credit rounds.
+  robustness_round_c.py  Seven/eight-feature RF robustness analysis.
+  final_v6_audit.py      Conservative label delay, calibration, vintage training.
+  tests/                 Unit and integrity tests for these research scripts.
+
+KEY MODEL-INPUT ARCHIVES (ALSO RELEVANT TO V7 RESEARCH)
+  v5_research_revised.csv      Revised historical monthly feature/outcome rows.
+  v5_pit_full_rows.csv         Historical monthly PIT feature/outcome rows.
+  v6_model_revised.csv         Audited revised model split rows.
+  v6_model_pit.csv             Audited PIT model split rows.
+  v6_roundB_revised_fred_cache.json
+  v6_roundB_pit_fred_cache.json
+  v6_final_1999_2004_pit_cache.json
+
+SELECTED EXPERIMENTAL OUTPUTS
+  v6_step2_validation_metrics.csv
+  v6_step3_probability_metrics.csv
+  v6_step3_warning_metrics.csv
+  v6_step4_validation_metrics.csv
+  v6_step5_probability_metrics.csv
+  v6_alternatives_scores.csv
+  v6_broad_scores.csv
+  v6_roundA_*.csv / .json (if kept under a results directory)
+  v6_roundB_scores.csv, v6_roundB_warnings.csv,
+  v6_roundB_predictions.csv, v6_roundB_manifest.json
+  v6_roundC_scores.csv, v6_roundC_warnings.csv,
+  v6_roundC_predictions.csv, v6_roundC_refits.csv,
+  v6_roundC_recent.csv, v6_roundC_manifest.json
+
+FINAL AUDIT OUTPUTS (KEEP TOGETHER WITH ORIGINAL V6)
+  v6_final_audit/v6_final_manifest.json
+  v6_final_audit/v6_final_regime_scores.csv
+  v6_final_audit/v6_final_origin_scores.csv
+  v6_final_audit/v6_final_origin_refits.csv
+  v6_final_audit/v6_final_calibration_audit.csv
+  v6_final_audit/v6_final_calibration_bins.csv
+  v6_final_audit/v6_final_warning_events.csv
+  v6_final_audit/v6_final_calibrated_predictions.csv
+  v6_final_audit/v6_final_origin_predictions.csv
+  v6_final_audit/mature30_roundC/
+
+  Keep original scripts and large experiment outputs in V6. Copying all of
+  them into V7 is unnecessary. Report tables can be viewed in V7's Research
+  Lab without importing or loading trained V6 model objects.
+
+SECURITY AND REPRODUCIBILITY
+  .env                         Private FRED key; never commit or upload.
+  v6_step2_models.joblib       Old Python/pickle model artifact. Keep in
+                               original trusted archive; do not automatically
+                               load into the V7 app or load untrusted copies.
+  v6_*_manifest.json          Research parameters/input fingerprints where
+                               emitted. Preserve with matching source files.
+  Distinguish true retrieved ALFRED data from revised series and simulated
+  test fixtures. Never use synthetic unit-test data as economic evidence.
+
+
+7. REPRODUCTION AND REVIEW NOTES
+--------------------------------
+The installed scripts include source-level checks and some built-in unit
+routines. From the ORIGINAL trusted V6 working directory, and with all
+required input data/caches and dependencies present, representative commands:
+
+  python -m unittest discover -s tests -p "test_*.py" -v
+  python final_v6_audit.py --self-test
+  python final_v6_audit.py --fetch-old-vintages
+
+The last command may make FRED/ALFRED API requests for missing vintages and
+writes derived reports. Running it requires the local private FRED API key.
+The report here summarizes uploaded real experiment outputs; it does not
+claim to rerun the complete V6 training/test sequence afresh.
+
+Critical interpretation safeguards:
+  - An ALFRED calendar-date vintage is not guaranteed intraday release timing.
+  - Revised predictors cannot be treated as historical information just
+    because observation reference dates are filtered.
+  - The initial 18-month and final 30-month target-maturity delays are
+    approximations, not exact NBER announcement calendars.
+  - Final origin-vintage rows do not recreate full contemporaneous refit
+    training tables, and the origin-vintage set has much less training history.
+  - Two evaluated later-period recessions are far too few to justify reliable
+    prospective skill, regardless of overlapping positive monthly labels.
+  - Candidate model selection after inspecting 2005-2024 prevents this
+    period from being described as an untouched test holdout.
+
+
+8. EXACT HANDOFF TO V7
+----------------------
+THE ROADMAP CHANGED:
+  Earlier planning anticipated additional forecasting/model-validation phases
+  after V6. Following the final audit, the decision was to stop repeated
+  recession-probability fitting and make V7 the final polished application.
+
+V7 PRODUCT:
+  MacroScript - U.S. Macroeconomic Intelligence & Historical Research.
+  Display current FRED observations and selected-date ALFRED data with clear
+  reference dates, sources, units, missingness and freshness. Build individual
+  and combined explanations from transparent economic feature calculations.
+  Show V5/V6 methodological results as a labelled historical Research Lab.
+
+V7 REUSES:
+  - Canonical FRED client, ALFRED historical reader and data-quality code.
+  - V4 current/Time Machine/revised Research loader and five main features.
+  - V5 transparent rule definitions, separated from predictive claims.
+  - V5 monthly PIT and revised research CSVs, using only appropriately
+    labelled fields and never exposing hindsight outcomes in an as-of view.
+  - V6 final reports and historical findings for educational research display.
+
+V7 DOES NOT REUSE AS LIVE FORECASTING INFRASTRUCTURE:
+  - The V6 logistic/Random Forest/boosting/probit probability pipelines.
+  - V6 hindsight recession targets for current or historical 'what was
+    known then' insight generation.
+  - Unvalidated absolute risk probabilities or invented recession scores.
+
+V7 IMPLEMENTATION ORDER:
+  1. Consolidate canonical V1-V5 backend modules and test imports/logic.
+  2. Make a safe, explicit current/history/revised data interface, with
+     date-level provenance and cache boundaries.
+  3. Build a professional GUI: Current Economy, Time Machine, individual
+     and combined Economic Insights, and historical Research Lab.
+  4. Test source/date availability, missing data, reference-month alignment,
+     revision comparisons and transparent signal calculations.
+  5. Package, document, screenshot and release a reproducible V7 application.
+
+The existing V1-V6 version folders stay untouched. V7 is a clean new folder,
+not a renamed V6 experiment directory.
+
+
+9. BOTTOM LINE
+--------------
+V6 made a meaningful quantitative research contribution but did not meet the
+higher standard required to deploy a dependable recession-probability product.
+The initial model's impressive validation accuracy was not robust to later
+historical data. Additional rates and credit indicators improved selected
+historical PIT results, but the gains depended on era, training vintage,
+calibration choices and a repeatedly examined test period. Recent false
+warnings remained substantial. The responsible decision is to preserve the
+complete research evidence, avoid deploying unsupported probabilities, and
+finish MacroScript as a polished economic-data and historical-intelligence
+tool in V7.

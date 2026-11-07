@@ -1,0 +1,27 @@
+{
+  "calibration_caveat": "Previous historical revised-input forecasts were already examined; no independent evaluation",
+  "existing_roundC_training": "1962 onward revised-history predictors, not PIT-trained",
+  "fixed_half_shrinkage": 0.5,
+  "historical_origin_vintage_end": "2024-12",
+  "historical_origin_vintage_start": "1999-12",
+  "historical_outcomes_overlap": true,
+  "maturity_delay_months": 30,
+  "maturity_note": "Conservative 12m horizon plus 18m lag; not exact NBER availability for each label",
+  "notes": [
+    "Extra 1999-2004 ALFRED vintage snapshots may be unavailable; models then omit missing rows",
+    "Only origin-month vintages stored in the PIT source, not full as-of training-table recomputation",
+    "Historical NBER dates are retrospective; the label delay is an explicit proxy, not announcement-by-announcement",
+    "RF5 PIT training has much less history than revised-history RF5; comparisons conflate vintage and sample length",
+    "BAA missing 2016-12 through 2017-02 from test audit; compare only shared PIT dates"
+  ],
+  "old_pit_fred_cached_after": 212,
+  "old_pit_fred_missing_before_fetch": 212,
+  "origin_training_refit_count": 33,
+  "origin_vintage_training": "PIT observations frozen at each training-row origin; not full historical as-of refit revisions",
+  "origin_vintage_window": "1999 onward only, not 1962 onward; only three nearby recession episodes",
+  "pit_test_months": 217,
+  "prequential_calibration": "intercept-only, fit to matured earlier revised walk-forward predictions",
+  "roundB_cache_sha256": "01a749c05db88ab8917eba9e13097736872da57512310fc7e9f87a180979757c",
+  "roundC_reference_sha256": "7fc8a35a4ce07aacbc2751f2f544e19340f6938c07402c6210ca23cdb12d7935",
+  "status": "Exploratory research; no genuinely independent later test period"
+}

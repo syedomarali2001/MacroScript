@@ -1,0 +1,373 @@
+MACROSCRIPT - VERSION 5 OVERVIEW
+================================
+Completion date: 2026-11-06
+Version status: Research and historical-audit phase complete; NOT a trained forecasting model.
+
+ONE-SENTENCE SUMMARY
+--------------------
+V5 converted V4's descriptive macroeconomic features into a defined recession-
+onset research dataset, tested transparent early-warning rules, checked how
+historical revisions and release delays affect those rules, and established
+benchmarks and limitations for the probabilistic modelling work in V6.
+
+
+1. WHY WE BUILT V5
+------------------
+V1-V4 connected to FRED/ALFRED, retrieved present and historical observations,
+verified quality and release/vintage caveats, and computed consistent monthly
+features. None of that established predictive usefulness.
+
+V5 asked:
+  - What exactly are we forecasting and how should success be measured?
+  - Which economic indicators warned ahead of US recession onsets?
+  - Does combining indicators reduce false alarms while preserving lead time?
+  - Would historical warnings actually have been visible at that decision date?
+  - What are the strongest simple rules that V6 should try to beat?
+
+V5 deliberately did NOT fit a statistical forecasting model, generate
+calibrated recession probabilities, or validate an investment strategy.
+
+
+2. THE TARGET AND THE DATA
+--------------------------
+Prediction outcome (targets.py): NBER-dated US recession onset, evaluated using
+FRED USREC monthly labels. Separate targets are recession onset within the
+NEXT 3, 6, and 12 calendar months. An expansion month is a prediction-eligible
+month; an already-recession month has no onset forecast target. Missing or
+unknown outcome horizons must not silently become negative labels. USREC is
+NEVER a predictive economic feature.
+
+Five established predictor groups (six source series):
+  1. Unemployment / Sahm-style change: UNRATE.
+  2. Nonfarm payroll growth: PAYEMS.
+  3. Industrial production growth: INDPRO.
+  4. Housing permit growth: PERMIT.
+  5. Monthly 10y-minus-3m Treasury term spread: GS10 - TB3MS.
+
+IMPORTANT: GS10 - TB3MS is a monthly yield spread in percentage points. It is
+not the same series as daily T10Y3M. Annual changes in housing are percentage
+changes, while the Treasury threshold is a percentage-point spread.
+
+Two historical datasets must stay separate:
+
+A. RETROSPECTIVE REVISED RESEARCH
+   File: v5_research_revised.csv
+   756 monthly records, January 1962-December 2024, with five primary feature
+   groups and 3/6/12-month outcomes. Eight recession episodes appear in the
+   period: 1970, 1973-75, 1980, 1981-82, 1990-91, 2001, 2007-09, and 2020.
+   IMPORTANT: these are today's revised historical observations. They were NOT
+   necessarily published or available in the same reference month.
+
+B. HISTORICAL POINT-IN-TIME / ALFRED
+   File: v5_pit_full_rows.csv
+   304 end-of-month snapshots, September 1999-December 2024, covering 2001,
+   2008, and 2020 recession onsets. After targeted repair, all 304 snapshots
+   have all six underlying source-quality flags marked OK. The snapshots
+   reconstruct historically recorded vintages as of each monthly cutoff;
+   reference months often lag the decision month. Daily vintages do not prove
+   intraday publication timestamps or a completely authentic live replay.
+
+The research label can be determined with hindsight. It is used to evaluate
+predictions, never to generate a contemporaneous feature.
+
+
+3. THE EXPERIMENTS AND WHAT THEY TAUGHT US
+-----------------------------------------
+STEP 1 - Recession target definitions (targets.py, test_targets.py)
+  - Defined eligible expansion months and onset-within-3/6/12-month labels.
+  - Checked actual USREC recession periods, and isolated the target from the
+    economic predictor set to prevent obvious outcome leakage.
+
+STEP 2 - Historical research datasets (research.py, test_research.py)
+  - Constructed a common feature/outcome table and pre-recession windows.
+  - Created a consistent way to examine individual recession episodes.
+  - Explicitly separated revised-history research and time-machine vintages.
+
+STEP 3 - Individual indicators and simple AND/OR rules
+  Files: signals.py, v5_signal_comparison.csv, v5_signal_event_details.csv
+  - Studied recession-event detection, first warning lead, monthly false alarms,
+    missing-data coverage, and warning spells.
+  - Treasury spread and housing permits appeared especially promising as a
+    combined *early-warning* rule. Payrolls, industrial production and the
+    Sahm-style signal were retained as continuous features; their particular
+    standalone thresholds were not the leading 12-month early-warning rules.
+  - Lower false-alarm rates do NOT establish a better rule if it misses events.
+
+STEP 4 - Historical accuracy checks and repair
+  Files: pit_audit.py, pit_full.py, pit_repair.py, v5_pit_full_*.csv,
+         v5_pit_cache/
+  - Collected the full 304-month historic vintage dataset and repaired bad
+    snapshots rather than silently using incomplete economic observations.
+  - Compared same-decision-date and, where supported, same-reference-month
+    readings to distinguish release lags from revisions.
+  - Found that different release availability can alter historical signals;
+    revised economic history must NOT be described as real-time predictions.
+
+STEP 5 - Persistence rules
+  Files: persistence.py, v5_persistence_*.csv
+  - Compared 1-, 2-, and 3-consecutive-month warning confirmations.
+  - Requiring three consecutive months improved the 1999-2024 point-in-time
+    relaxed Treasury-plus-housing rule's FPR from 12.9% to 10.5%, but shortened
+    mean lead time from 11.7 to 9.7 months.
+  - A stricter Treasury-below-0 PLUS housing rule lost one of three recession
+    detections at 2- or 3-month persistence.
+  - Multi-month waiting alone did not solve prolonged 2022-24 false warnings.
+
+STEP 6 - Corporate credit challenger
+  Files: credit_experiment.py, v5_credit_revised_features.csv,
+         v5_credit_revised_metrics.csv, v5_credit_pit_pilot.csv
+  - Constructed monthly Baa corporate bond yield minus GS10.
+  - Historical-vintage pilot succeeded at four selected dates.
+  - Revised full-sample spread >=3.0 pp flagged 0/8 recession onsets in advance;
+    three-month spread widening >=0.5 pp flagged 3/8.
+  - At these TESTED thresholds, credit was not a useful mandatory additional
+    early-warning filter. It may still provide economic/financial-stress
+    information as a continuous feature for later research.
+  - No continuous full 304-month credit-vintage archive was collected in V5.
+
+STEP 7 - Jobless claims plus combination-improvement research
+  Files: claims_experiment.py, v5_claims_combo_*.csv,
+         v5_claims_revised_features.csv, v5_claims_pit_pilot.csv
+  - Built monthly indicators from the latest available weekly IC4WSA four-week
+    average: 3-month and 12-month growth.
+  - Combined claims and credit confirmations with the fixed Treasury + housing
+    baseline, comparing baseline and challenger on matching usable months.
+  - In revised 1962-2024 data, Treasury+housing+claims YoY>=0 showed 8/8
+    detection and a 4.0% FPR, compared with 7.6% for the baseline on identical
+    claims-available months (89.3% of all eligible expansion months covered).
+  - This looked strong RETROSPECTIVELY, but did not establish real-time skill.
+
+STEP 8 - Full jobless claims PIT audit with integrated automatic repair
+  Files: v5_claims_pit_cache/, v5_claims_pit_full_*.csv
+  - Completed 187/187 historical claims snapshots, June 2009-December 2024;
+    all are recorded as OK after resumable retries. No separate claims repair
+    script was needed.
+  - The archive window contains only the 2020 recession onset, so this is a
+    source-availability check plus a limited historical rule evaluation.
+  - The YEAR-OVER-YEAR claims rule failed to detect that one onset despite its
+    excellent retrospective 8/8 result: do not promote it as validated.
+  - The THREE-MONTH claims growth >=0 rule retained 1/1 detection, reduced
+    monthly false-alarm rate, and shortened first-warning lead.
+  - The filtered 3-month rule nevertheless generated MORE separate false-warning
+    episodes: lower false-alarm-month percentages are not the whole story.
+  - Claims vintage changes were observed versus the revised-date comparison;
+    both revisions and different selected reference weeks can matter.
+
+
+4. REPRODUCED KEY RESULTS
+------------------------
+All rates below are MONTHLY false-warning frequencies among eligible expansion
+months with NO recession onset in the next 12 months. They are NOT the
+percentage of recession forecasts that are wrong, nor the percentage of
+recessions missed. 'Detected' means at least one flagged expansion month within
+the preceding 12 months. Average lead is time from the FIRST qualifying flag
+in that evaluation window to onset.
+
+REVISED-HISTORY RESEARCH, 1962-2024 (8 recession episodes)
+  Treasury spread < 0:
+     7/8 detected; FPR 6.4%; mean lead 9.7 months.
+  Treasury spread < 0.5 AND housing permits YoY < 0:
+     8/8 detected; FPR 10.6% (61/575 negative months);
+     mean lead 10.5 months.
+  Add claims YoY >= 0 (only matched claims-available months):
+     8/8 detected; challenger FPR 4.0% vs matched baseline FPR 7.6%;
+     mean lead 9.0 months; 89.3% coverage of full eligible months.
+
+POINT-IN-TIME, 1999-2024 (304 snapshots, 3 recession onsets)
+  Treasury spread < 0:
+     3/3 detected; FPR 12.1%; mean lead 9.0 months.
+  Treasury spread < 0.5 AND housing permits YoY < 0:
+     3/3 detected; FPR 12.9% (31/240 negative months);
+     mean lead 11.7 months.
+  Both reported rules have 100% usable eligible-month coverage in this audit.
+
+CLAIMS POINT-IN-TIME, 2009-2024 (187 snapshots; 1 onset, 2020)
+  Baseline Treasury + housing:
+     1/1 detected; FPR 13.4% (23/172 negative months);
+     first warning 12 months ahead; 2 separate false-warning runs.
+  Baseline AND claims YoY >= 0:
+     0/1 detected; FPR 7.6% (13/172); 4 false-warning runs.
+  Baseline AND claims 3-month growth >= 0:
+     1/1 detected; FPR 5.8% (10/172); first warning 9 months ahead;
+     5 separate false-warning runs.
+  All 184 eligible expansion months in this claims audit had usable features.
+
+These figures are research observations, not a guarantee of how any rule
+performs in the next recession. In particular, COVID-19 was an exogenous shock;
+a prior warning does not establish that the model foresaw the pandemic.
+
+
+5. FINAL V5 BENCHMARKS TO FREEZE
+--------------------------------
+PRIMARY RULE BENCHMARK:
+   Treasury spread (GS10 - TB3MS) < +0.5 percentage points
+   AND housing permits 12-month growth < 0%.
+
+SIMPLE BENCHMARK:
+   Treasury spread (GS10 - TB3MS) < 0 percentage points.
+
+OPTIONAL EXPERIMENTAL CONFIRMATION:
+   Primary rule AND IC4WSA claims 3-month growth >= 0%.
+   Evaluate only on historically supported claims dates; do not represent
+   this rule as proven on all eight historical recessions.
+
+The three rules above are reference comparators, NOT the final predictive
+model. They were investigated/selected using V5's observed history and are
+not untouched out-of-sample benchmarks.
+
+
+6. FILES, FOLDERS, AND THEIR ROLES
+----------------------------------
+CORE APPLICATION / DATA (from V1-V4, still needed)
+  main.py          Terminal application and display modes.
+  config.py        Series metadata and project configuration.
+  fred_client.py   FRED API communication.
+  history.py       ALFRED historic-vintage retrieval.
+  data_quality.py  Missing/stale/history quality rules.
+  features.py      Core feature calculations.
+  data_loader.py   Present, historical Time Machine and revised Research modes.
+  .env             LOCAL PRIVATE FRED API key: never commit or share.
+  .gitignore       Excludes private key/caches/generated work as configured.
+
+V5 RESEARCH CODE (retain; some need not be called by V6 directly)
+  targets.py             Recession-onset label construction; REUSE IN V6.
+  research.py            Feature-label dataset builder; REUSE/REFERENCE.
+  signals.py             Rule evaluation and benchmark definitions; REUSE.
+  pit_audit.py           Historical-versus-revised diagnostics; ARCHIVE.
+  pit_full.py            Continuous PIT collection/report generation; RETAIN.
+  pit_repair.py          Repair of original five-group PIT cache; RETAIN.
+  persistence.py         Consecutive-warning sensitivity tests; ARCHIVE.
+  credit_experiment.py   Exploratory corporate credit experiment; ARCHIVE.
+  claims_experiment.py   Claims, combined rules, PIT audit, integrated repair;
+                         retain if updating claims history.
+  tests/                 Unit and integration verification; KEEP.
+
+MOST IMPORTANT V6 INPUT CSVs
+  v5_research_revised.csv       1962-2024 long revised modelling research.
+  v5_pit_full_rows.csv          1999-2024 six-source point-in-time features.
+  v5_claims_pit_full_rows.csv   2009-2024 matched claims+baseline PIT features.
+
+OPTIONAL / SUPPLEMENTARY V6 INPUT CSVs
+  v5_claims_revised_features.csv   Long revised-history claims features.
+  v5_credit_revised_features.csv   Long revised-history credit features.
+  v5_signal_comparison.csv        Historical rule benchmark metrics.
+  v5_pit_full_metrics.csv         Historical-vintage baseline metrics.
+  v5_claims_pit_full_metrics.csv  Historical-vintage claims audit metrics.
+  v5_claims_pit_full_events.csv   2020 event/lead-time details.
+  v5_recession_windows.csv        Recession-relative feature snapshots.
+
+AUDIT / REPRODUCIBILITY OUTPUTS (KEEP, NOT PRIMARY MODEL INPUTS)
+  v5_pit_full_comparison.csv, v5_pit_full_events.csv,
+  v5_claims_pit_full_comparisons.csv, v5_claims_combo_metrics.csv,
+  v5_claims_combo_events.csv, v5_claims_pit_pilot.csv,
+  v5_credit_revised_metrics.csv, v5_credit_pit_pilot.csv,
+  v5_persistence_metrics.csv, v5_persistence_events.csv,
+  v5_persistence_false_streaks.csv, v5_pit_summary.csv,
+  v5_pit_audit.csv, v5_signal_event_details.csv, etc.
+
+CACHES
+  v5_pit_cache/          Original monthly PIT FRED/ALFRED snapshots.
+  v5_claims_pit_cache/   Monthly historical claims vintage and retry records.
+  Do not delete if you want inexpensive reproducible recomputation.
+  Keep caches and API key out of public commits, subject to data-license rules.
+
+TESTING
+  The project's test inventory grew across V5. The last supplied test-update
+  target was 152 offline tests (plus separately run live-FRED integration
+  checks when appropriate). This overview does NOT independently certify that
+  the latest full suite passed; re-run it before a release/tag:
+
+     python -m unittest discover -s tests -p "test_*.py" -v
+
+  Never confuse synthetic passing unit tests with economic forecasting skill.
+
+
+7. WHAT V5 CANNOT CLAIM
+-----------------------
+  - No model has been trained and no calibrated probabilities exist yet.
+  - Eight recessions is a tiny number of independent economic episodes;
+    hundreds of overlapping monthly rows are not independent recessions.
+  - Most rule thresholds were explored after seeing the historical sample.
+    V5's 8/8 is in-sample selection, not out-of-sample validation.
+  - Long revised-history data contain information that may have arrived later.
+    They are useful for feature research, not a strict live-deployment replay.
+  - ALFRED month-end vintages are stronger evidence than revised records but
+    are not proof that a release was available at every intraday cutoff.
+  - The IC4WSA archive does not provide directly usable pre-May-2009 historical
+    vintages for the 2001 or 2008 claims-component decisions.
+  - Claims 2009-24 validation covers ONE onset only. A filtered 1/1 result
+    is not strong proof of future sensitivity.
+  - False-alarm months, separate warning episodes, the time spent in warning,
+    and prediction probabilities are different metrics.
+  - Predicting US recession onset is different from predicting stock-market
+    returns, equity drawdowns, or a trading decision.
+
+
+8. EXACT HANDOFF TO V6
+----------------------
+V6 GOAL:
+   Train an interpretable statistical model that outputs recession-onset
+   probabilities within the next 3, 6 and 12 months. Compare it against a
+   constant historical event-rate probability benchmark and the frozen V5
+   rule benchmarks on chronologically held-out observations.
+
+WHAT CARRIES OVER:
+   - Core V4 feature definitions and V5 historical feature rows.
+   - V5's fixed, separate 3/6/12-month recession targets and USREC labels.
+   - Historical-vintage source/quality/reference-date safeguards.
+   - Three frozen V5 warning-rule comparators.
+   - Claims and credit continuous features as optional research extensions,
+     only where vintage and training-date coverage permit.
+   - All V5 unit tests and reproducibility/audit reports.
+
+WHAT DOES NOT CARRY OVER AS A CLAIM:
+   - '8/8 implies reliable future forecasting.'
+   - Claims YoY was validated historically (it was not).
+   - In-sample rule selection is a fair untouched test set.
+   - Credit or extra claims are mandatory predictors because we tested them.
+
+SUGGESTED V6 IMPLEMENTATION SEQUENCE (NOT MORE V5 THRESHOLD SEARCHING):
+   1. Build a strict modelling matrix for the three horizons: features,
+      targets, observation/reference dates, missingness and source flags.
+   2. Train separate regularized logistic regressions for 3/6/12 months.
+      Fit scaling/imputation in training folds ONLY; preserve feature names
+      and report interpretable coefficients/feature contributions.
+   3. Chronologically evaluate forecasts. Prevent leakage from overlapping
+      target horizons and training labels that extend past the forecast date.
+      Start with training-only recession base-rate probabilities; estimate
+      V5-rule forecast probabilities from training data only. Compare models
+      on identical eligible test months and horizons.
+   4. Report Brier score, log loss, discrimination, calibration limitations,
+      recession-event detection, warning lead, false-warning months AND runs,
+      model coverage, and uncertainty. Freeze thresholds before evaluating
+      test periods. Distinguish revised-source chronology from PIT audits.
+   5. Save reproducible probability predictions, model metadata, evaluation
+      reports, and a V6 overview. Only then consider V7 deeper robustness
+      analysis and V8 app/presentation work.
+
+SUCCESS CRITERION:
+   Not '8/8 in the data we tuned against.' A successful V6 is an honest,
+   reproducible forecast system whose probability quality and warning
+   trade-offs compare favourably with appropriately trained simple baselines
+   on chronologically evaluated data. If a complex model does not outperform
+   the simple V5 rules, report it: that is a valid research finding.
+
+CAUTION ABOUT EARLIER ROADMAP:
+   The original V1-V8 project roadmap assigned model training to V5. During
+   implementation, the schedule evolved. The V4 overview and present handoff
+   use the updated division: V5 = research/benchmarks, V6 = probability models,
+   V7 = deeper out-of-sample validation, V8 = finished application.
+
+
+9. BOTTOM LINE
+--------------
+We started V5 with calculated economic measurements but no empirical evidence
+of their predictive usefulness. We finished with labeled recession horizons,
+a 63-year revised research table, a repaired 304-month core point-in-time
+archive, a 187-month claims point-in-time archive with automatic repair, tested
+rules with explicit false-alarm/lead-time trade-offs, and a clear baseline for
+V6. We did NOT finish with a proven recession forecasting model.
+
+The next version must learn probabilities from the features and evaluate them,
+not simply keep adjusting threshold combinations until historical numbers look
+better.

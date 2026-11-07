@@ -1,0 +1,51 @@
+# MacroScript V7 — public repository ignore rules
+# Never commit local credentials or secrets.
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+.streamlit/secrets.*
+*.pem
+*.p12
+*.pfx
+
+# Python environments, build artifacts, and temporary files.
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+.ipynb_checkpoints/
+
+# IDE, OS, and logs.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# Transient FRED/ALFRED API cache.
+data/cache/*
+!data/cache/.gitkeep
+
+# Archived point-in-time and revised source datasets remain local by default.
+# They are not necessary for live/current and custom-date API views.
+# Review data-source licensing before changing this exclusion.
+research/datasets/*.csv
+research/datasets/*.json
+
+# Extra raw caches, models, and exports, if later placed in V7.
+**/v5_pit_cache/
+**/v5_claims_pit_cache/
+**/v3_audit_cache/
+*.joblib
+*.pkl
+*.pickle
