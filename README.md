@@ -36,7 +36,7 @@ You need **Python 3.10 or newer** and a personal [FRED API key](https://fred.stl
 
 ```powershell
 # In PowerShell, from the folder containing the repository:
-git clone https://github.com/YOUR_USERNAME/MacroScript.git
+git clone https://github.com/syedomarali2001/MacroScript.git
 cd MacroScript
 
 # Install dependencies (a virtual environment is recommended):
