@@ -32,6 +32,7 @@ ROOT = Path(__file__).resolve().parent
 DATASETS = ROOT / "research" / "datasets"
 AUDIT = ROOT / "research" / "v6_final_audit"
 load_dotenv(ROOT / ".env")
+GITHUB_URL = "https://github.com/syedomarali2001/MacroScript"
 
 st.set_page_config(
     page_title="MacroScript | Economic Intelligence",
@@ -47,39 +48,39 @@ INDICATORS = {
         "reference": "unemployment_reference_month", "age": "unemployment_age_months",
         "sources": ("UNRATE",), "color": "#81A9FF", "group": "unemployment",
         "series": "UNRATE", "chart_unit": "%", "chart_title": "Unemployment rate",
-        "detail": "Share of the labor force unemployed. Changes often lag turning points.",
+        "detail": "The share of the labor force that is unemployed. This can react after the broader economy starts changing.",
     },
     "payrolls": {
-        "name": "Employment", "measure": "Payroll growth, 12m",
+        "name": "Employment", "measure": "Job growth (past year)",
         "field": "payroll_growth_12m_pct", "unit": "%", "fmt": "{:+.2f}%",
         "reference": "payrolls_reference_month", "age": "payrolls_age_months",
         "sources": ("PAYEMS",), "color": "#4DD9C1", "group": "payrolls",
-        "series": "PAYEMS", "chart_unit": "%", "chart_title": "Payroll employment · 12m growth",
-        "detail": "Year-over-year growth in nonfarm payroll employment.",
+        "series": "PAYEMS", "chart_unit": "%", "chart_title": "Job growth compared with a year earlier",
+        "detail": "How much U.S. payroll employment has grown or declined over the previous 12 months.",
     },
     "industrial_production": {
-        "name": "Production", "measure": "Industrial growth, 12m",
+        "name": "Production", "measure": "Industrial output (past year)",
         "field": "industrial_growth_12m_pct", "unit": "%", "fmt": "{:+.2f}%",
         "reference": "industrial_production_reference_month", "age": "industrial_production_age_months",
         "sources": ("INDPRO",), "color": "#C4A5FF", "group": "industrial_production",
-        "series": "INDPRO", "chart_unit": "%", "chart_title": "Industrial production · 12m growth",
-        "detail": "Year-over-year growth in the industrial production index.",
+        "series": "INDPRO", "chart_unit": "%", "chart_title": "Industrial output compared with a year earlier",
+        "detail": "The percentage change in industrial production over the past year.",
     },
     "housing_permits": {
-        "name": "Housing", "measure": "Building permits, 12m",
+        "name": "Housing", "measure": "Building permits (past year)",
         "field": "permits_growth_12m_pct", "unit": "%", "fmt": "{:+.2f}%",
         "reference": "housing_permits_reference_month", "age": "housing_permits_age_months",
         "sources": ("PERMIT",), "color": "#FFC47B", "group": "housing_permits",
-        "series": "PERMIT", "chart_unit": "%", "chart_title": "Housing permits · 12m growth",
-        "detail": "Year-over-year change in residential building permits (seasonally adjusted annual rate).",
+        "series": "PERMIT", "chart_unit": "%", "chart_title": "Building permits compared with a year earlier",
+        "detail": "The yearly change in permits for new homes. Declining permits may signal slowing residential construction.",
     },
     "treasury_spread": {
-        "name": "Yield curve", "measure": "10Y minus 3M spread",
+        "name": "Yield curve", "measure": "Treasury interest-rate gap",
         "field": "treasury_spread_pp", "unit": "pp", "fmt": "{:+.2f} pp",
         "reference": "treasury_spread_reference_month", "age": "treasury_spread_age_months",
         "sources": ("GS10", "TB3MS"), "color": "#F38BA8", "group": "treasury_spread",
-        "series": None, "chart_unit": "pp", "chart_title": "Monthly 10Y–3M Treasury spread",
-        "detail": "GS10 − TB3MS, matching monthly yield observations. This is not the daily T10Y3M series.",
+        "series": None, "chart_unit": "pp", "chart_title": "Long-term minus short-term Treasury rates",
+        "detail": "The 10-year Treasury rate minus the 3-month Treasury bill rate, using monthly readings. A negative gap means short-term rates are higher.",
     },
 }
 DISPLAY_ORDER = ("unemployment", "payrolls", "industrial_production", "housing_permits", "treasury_spread")
@@ -95,50 +96,124 @@ MONTHLY_CSV = DATASETS / "v5_pit_full_rows.csv"
 REVISED_CSV = DATASETS / "v5_research_revised.csv"
 
 
-CSS = """
-<style>
-:root {color-scheme: dark;}
-[data-testid="stAppViewContainer"] {background:#0B1120;color:#E6ECF7;}
-[data-testid="stSidebar"] {background:#0E172A;border-right:1px solid #24324A;}
-[data-testid="stHeader"] {background:transparent;}
-[data-testid="stToolbar"] {right:1rem;}
-.block-container {max-width:1330px;padding-top:2.1rem;padding-bottom:3rem;}
-h1,h2,h3 {letter-spacing:-.035em;}
-h1 {color:#F4F7FF !important;}
-p,span,label {line-height:1.5;}
-.ms-brand {font-size:1.25rem;font-weight:850;letter-spacing:-.04em;color:#F0F5FF;margin-bottom:.18rem;}
-.ms-brand span {color:#67DCCA;}
-.ms-subtle {color:#94A6C0;font-size:.82rem;}
-.ms-hero {padding:1.2rem 0 1.5rem;border-bottom:1px solid #25324A;margin-bottom:1.4rem;}
-.ms-eyebrow {color:#64E0C4;text-transform:uppercase;letter-spacing:.19em;font-size:.71rem;font-weight:800;margin-bottom:.48rem;}
-.ms-title {font-size:clamp(2rem,3.3vw,3.2rem);color:#F5F7FB;font-weight:850;letter-spacing:-.055em;line-height:1.13;margin:0 0 .6rem;}
-.ms-deck {color:#AAB9D0;font-size:.99rem;max-width:850px;line-height:1.65;}
-.ms-kpi {border:1px solid #2C3A54;background:linear-gradient(153deg,#17253B,#101B2E);border-radius:14px;padding:.95rem 1rem .9rem;min-height:137px;margin-bottom:.35rem;}
-.ms-kpi-top {font-size:.73rem;text-transform:uppercase;letter-spacing:.1em;color:#A6B8D1;font-weight:750;}
-.ms-kpi-val {font-size:1.6rem;font-weight:830;color:#F4F7FC;letter-spacing:-.045em;margin:.54rem 0 .34rem;white-space:nowrap;}
-.ms-kpi-bottom {font-size:.76rem;color:#A1B0C9;}
-.ms-section {font-size:1.17rem;letter-spacing:-.03em;font-weight:750;color:#EEF4FF;margin:1.2rem 0 .6rem;}
-.ms-note {padding:1rem 1.15rem;background:#132137;border:1px solid #2B4160;border-radius:14px;color:#C2CFE3;line-height:1.65;margin:.8rem 0 1.1rem;}
-.ms-note strong {color:#EAF0FF;}
-.ms-pill {border-radius:30px;padding:.17rem .58rem;border:1px solid #375071;color:#BACBE2;font-size:.72rem;font-weight:680;}
-.ms-result {padding:1.03rem 1.15rem;background:#131F34;border:1px solid #2E3E55;border-radius:13px;margin-bottom:.55rem;}
-.ms-result-label {font-size:.85rem;font-weight:750;color:#EDF3FF;}
-.ms-result-desc {font-size:.80rem;color:#ACBDD5;margin-top:.36rem;line-height:1.55;}
-.ms-footer {color:#7F92AF;font-size:.76rem;margin-top:1.4rem;border-top:1px solid #26334B;padding-top:1rem;}
-.ms-mode-card {border:1px solid #2C3C55;background:linear-gradient(150deg,#182940,#101B2C);border-radius:18px;padding:1.4rem;min-height:205px;margin:.25rem 0 .5rem;}
-.ms-mode-icon {font-size:1.65rem;margin-bottom:.55rem;}
-.ms-mode-title {font-size:1.32rem;color:#F2F6FF;font-weight:770;letter-spacing:-.035em;margin:.2rem 0 .45rem;}
-.ms-mode-description {font-size:.91rem;color:#B0C0D6;line-height:1.65;}
-.ms-step-title {font-size:.73rem;color:#66DAC4;font-weight:780;text-transform:uppercase;letter-spacing:.12em;}
-.ms-small-note {font-size:.83rem;color:#A9BAD2;line-height:1.65;margin:.3rem 0 .8rem;}
-[data-testid="stSidebar"] .stButton button {text-align:left;justify-content:flex-start;}
-[data-testid="stAppViewContainer"] .stButton button {border-radius:10px;}
+THEMES = {
+    "Light": dict(bg="#F5F7FB", side="#EBF1F8", panel="#FFFFFF", elevated="#EDF3FA", text="#17263A", muted="#465D76", faint="#506880", border="#CEDAE6", accent="#146BA3", on_accent="#FFFFFF", chart="#266DCC", good="#17785D", bad="#B34350", warn="#9F651B"),
+    "Dark Navy": dict(bg="#0B1220", side="#0F1A2C", panel="#15233A", elevated="#1C304A", text="#F3F7FC", muted="#B5C5DC", faint="#89A0BD", border="#304461", accent="#6AD7C6", on_accent="#061B1C", chart="#8EAEFF", good="#70DDB9", bad="#F2A0A8", warn="#F4C18B"),
+    "Ocean Blue": dict(bg="#081724", side="#0B2233", panel="#102B40", elevated="#173852", text="#EFF8FF", muted="#B4D1E2", faint="#84A8BD", border="#2B5268", accent="#69C7F4", on_accent="#08212D", chart="#74C4FF", good="#74DCC3", bad="#F3A1A6", warn="#F7C888"),
+    "Forest Green": dict(bg="#0D1916", side="#11241F", panel="#172D26", elevated="#1D3A30", text="#F1FAF4", muted="#B8D2C4", faint="#89AA9A", border="#375648", accent="#8CE2B6", on_accent="#10251A", chart="#8FC5AD", good="#8CE2B6", bad="#EDA4A3", warn="#F2C994"),
+    "Burgundy Red": dict(bg="#1A111A", side="#261622", panel="#301F2D", elevated="#40283A", text="#FFF3F7", muted="#DBC0D0", faint="#B497AD", border="#614257", accent="#F3A2B5", on_accent="#351020", chart="#F0ABC5", good="#99D9BA", bad="#F3A2B5", warn="#F5C18F"),
+}
 
-[data-testid="stMetricValue"] {color:#F4F7FF;}
-[data-testid="stDataFrame"], [data-testid="stPlotlyChart"] {border-radius:14px;overflow:hidden;}
+
+def palette():
+    return THEMES.get(st.session_state.get("ms_theme", "Light"), THEMES["Light"])
+
+
+def theme_css():
+    c = palette()
+    return """<style>
+:root {color-scheme: %(scheme)s; --ms-bg: %(bg)s; --ms-side: %(side)s; --ms-panel: %(panel)s; --ms-elevated: %(elevated)s; --ms-text: %(text)s; --ms-muted: %(muted)s; --ms-faint: %(faint)s; --ms-border: %(border)s; --ms-accent: %(accent)s; --ms-on-accent: %(on_accent)s; --ms-good: %(good)s; --ms-bad: %(bad)s; --ms-warn: %(warn)s;}
+[data-testid="stAppViewContainer"], [data-testid="stMain"] {background:var(--ms-bg);color:var(--ms-text);}
+[data-testid="stSidebar"] {background:var(--ms-side);border-right:1px solid var(--ms-border);}
+[data-testid="stHeader"] {background:transparent;}
+.block-container {max-width:1460px;padding-top:2.2rem;padding-bottom:4rem;}
+html, body, [data-testid="stAppViewContainer"] p, [data-testid="stAppViewContainer"] label {color:var(--ms-text);}
+[data-testid="stSidebar"] p, [data-testid="stSidebar"] label {color:var(--ms-muted);}
+h1,h2,h3 {color:var(--ms-text) !important;letter-spacing:-.04em;}
+p {line-height:1.6;}
+[data-testid="stSidebar"] .stButton button {justify-content:flex-start;text-align:left;font-size:1rem;font-weight:650;min-height:2.95rem;}
+.stButton button, [data-testid="stDownloadButton"] button {border-radius:11px!important;padding:.55rem 1.1rem!important;font-weight:700!important;transition:none!important;}
+.stButton button[kind="primary"], [data-testid="stDownloadButton"] button[kind="primary"] {background:var(--ms-accent)!important;color:var(--ms-on-accent)!important;border-color:var(--ms-accent)!important;}
+.stButton button[kind="secondary"], [data-testid="stDownloadButton"] button[kind="secondary"] {background:var(--ms-panel)!important;color:var(--ms-text)!important;border-color:var(--ms-border)!important;}
+[data-baseweb="select"]>div, [data-baseweb="input"]>div, [data-baseweb="base-input"] {background:var(--ms-panel)!important;color:var(--ms-text)!important;border:1px solid var(--ms-border)!important;}
 [data-testid="stAlert"] {border-radius:12px;}
-</style>
-"""
+[data-testid="stPlotlyChart"] {border-radius:18px;overflow:hidden;}
+[data-testid="stRadio"] label {font-size:.92rem;font-weight:600;}
+[data-testid="stHorizontalBlock"] {gap:.9rem;}
+[data-testid="stWidgetLabel"] p, [data-testid="stCaptionContainer"] p {color:var(--ms-muted)!important;}
+/* Streamlit renders button labels as nested paragraphs. Set contrast on those too. */
+.stButton button[kind="primary"] *, [data-testid="stDownloadButton"] button[kind="primary"] * {color:var(--ms-on-accent)!important;fill:var(--ms-on-accent)!important;}
+.stButton button[kind="secondary"] *, [data-testid="stDownloadButton"] button[kind="secondary"] * {color:var(--ms-text)!important;fill:var(--ms-text)!important;}
+.stButton button:focus-visible, [data-testid="stLinkButton"] a:focus-visible {outline:3px solid var(--ms-accent);outline-offset:3px;}
+[data-testid="stLinkButton"] a, .stLinkButton a {background:var(--ms-panel)!important;color:var(--ms-text)!important;border:1px solid var(--ms-border)!important;border-radius:11px!important;min-height:2.75rem!important;font-weight:750!important;}
+[data-testid="stLinkButton"] a *, .stLinkButton a * {color:var(--ms-text)!important;fill:var(--ms-text)!important;}
+[data-baseweb="select"] span, [data-baseweb="select"] input, [data-baseweb="select"] svg,
+[data-testid="stDateInput"] input, [data-testid="stDateInput"] svg {color:var(--ms-text)!important;fill:var(--ms-text)!important;}
+[data-testid="stDateInput"] input {background:var(--ms-panel)!important;border-color:var(--ms-border)!important;}
+[data-baseweb="popover"] [role="listbox"], [data-baseweb="popover"] [role="option"] {background:var(--ms-panel)!important;color:var(--ms-text)!important;}
+[data-testid="stRadio"] label p {color:var(--ms-text)!important;}
+/* Date input uses a floating calendar portal, not a child of the input field.
+   Apply the active MacroScript palette to the field AND the calendar popup. */
+[data-testid="stDateInputField"] {background:var(--ms-panel)!important;color:var(--ms-text)!important;border-color:var(--ms-border)!important;}
+[data-testid="stDateInputField"] [role="spinbutton"],
+[data-testid="stDateInputField"] [data-type="literal"] {color:var(--ms-text)!important;}
+[data-testid="stDateInputField"] [data-focused] {background:var(--ms-accent)!important;color:var(--ms-on-accent)!important;}
+[data-testid="stDateInputField"] button, [data-testid="stDateInputField"] button svg {color:var(--ms-text)!important;fill:currentColor!important;}
+/* React Aria calendar (Streamlit 1.62+) and legacy BaseWeb calendar. */
+[data-testid="stDateInputCalendar"], [data-baseweb="calendar"] {background:var(--ms-panel)!important;color:var(--ms-text)!important;border:1px solid var(--ms-border)!important;color-scheme:%(scheme)s!important;}
+[data-testid="stDateInputCalendar"] header button,
+[data-testid="stDateInputCalendar"] header button svg,
+[data-testid="stDateInputCalendar"] [role="columnheader"],
+[data-testid="stDateInputCalendar"] [role="gridcell"]:not([data-selected]):not([data-disabled]):not([data-outside-month]),
+[data-baseweb="calendar"] button:not([aria-selected="true"]) {color:var(--ms-text)!important;}
+[data-testid="stDateInputCalendar"] [data-outside-month],
+[data-baseweb="calendar"] [aria-disabled="true"] {color:var(--ms-faint)!important;}
+[data-testid="stDateInputCalendar"] [data-selected]:not([data-disabled]),
+[data-baseweb="calendar"] [aria-selected="true"] {background:var(--ms-accent)!important;color:var(--ms-on-accent)!important;}
+/* The month/year pickers are separate portals in newer Streamlit versions. */
+.stDateInputHeaderPickerPopover, [data-testid="stDateInputHeaderPickerPopover"] {background:var(--ms-panel)!important;color:var(--ms-text)!important;border:1px solid var(--ms-border)!important;}
+.stDateInputHeaderPickerPopover [role="option"],
+[data-testid="stDateInputHeaderPickerPopover"] [role="option"] {color:var(--ms-text)!important;}
+
+.ms-brand {font-size:1.43rem;font-weight:850;letter-spacing:-.045em;color:var(--ms-text);margin:0 0 .3rem;}
+.ms-brand span {color:var(--ms-accent);}
+.ms-tagline {font-size:.9rem;color:var(--ms-muted);line-height:1.55;}
+.ms-eyebrow {font-size:.76rem;text-transform:uppercase;letter-spacing:.13em;font-weight:850;color:var(--ms-accent);margin-bottom:.72rem;}
+.ms-hero {margin:.15rem 0 1.6rem;padding:0 0 1.1rem;border-bottom:1px solid var(--ms-border);}
+.ms-title {font-size:clamp(2.45rem,4.4vw,4.2rem);font-weight:860;letter-spacing:-.055em;line-height:1.09;color:var(--ms-text);margin:0 0 .78rem;}
+.ms-deck {font-size:1.07rem;line-height:1.65;color:var(--ms-muted);max-width:860px;}
+.ms-section {font-size:1.5rem;font-weight:790;letter-spacing:-.035em;color:var(--ms-text);margin:1.45rem 0 .55rem;}
+.ms-mini-title {font-size:.84rem;text-transform:uppercase;letter-spacing:.10em;font-weight:800;color:var(--ms-muted);}
+.ms-mode-card {min-height:300px;border:1px solid var(--ms-border);background:var(--ms-panel);border-radius:20px;padding:1.75rem 1.8rem 1.45rem;margin-bottom:.6rem;}
+.ms-mode-number {color:var(--ms-accent);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;font-weight:850;}
+.ms-mode-symbol {font-size:2.35rem;margin:1.1rem 0 .8rem;}
+.ms-mode-title {color:var(--ms-text);font-size:2.25rem;line-height:1.1;font-weight:825;letter-spacing:-.045em;margin-bottom:.7rem;}
+.ms-mode-description {color:var(--ms-muted);font-size:1.06rem;line-height:1.65;min-height:3.4rem;}
+.ms-mode-why {margin-top:1.1rem;padding-top:1rem;border-top:1px solid var(--ms-border);color:var(--ms-text);font-size:.94rem;line-height:1.55;}
+.ms-research-card {background:var(--ms-panel);border:1px solid var(--ms-border);border-radius:18px;padding:1.55rem 1.8rem;margin:1.4rem 0 .6rem;display:grid;grid-template-columns:1fr 2fr;column-gap:2rem;align-items:center;}
+.ms-research-card .ms-research-title {color:var(--ms-text);font-size:1.5rem;font-weight:820;letter-spacing:-.035em;}
+.ms-research-card .ms-research-copy {color:var(--ms-muted);font-size:1rem;line-height:1.6;}
+.ms-benchmark-head {display:grid;grid-template-columns:1.2fr 1.45fr 2.35fr;gap:1rem;padding:.75rem 1.1rem;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:var(--ms-muted);}
+.ms-benchmark {background:var(--ms-panel);border:1px solid var(--ms-border);border-radius:15px;overflow:hidden;margin:.4rem 0 .8rem;}
+.ms-benchmark-row {display:grid;grid-template-columns:1.2fr 1.45fr 2.35fr;gap:1rem;padding:1rem 1.1rem;align-items:center;border-bottom:1px solid var(--ms-border);color:var(--ms-text);font-size:.95rem;line-height:1.55;}
+.ms-benchmark-row:last-child {border-bottom:0;}
+.ms-benchmark-name {font-weight:780;}
+.ms-benchmark-value {font-weight:780;font-variant-numeric:tabular-nums;color:var(--ms-text);}
+.ms-benchmark-hint {color:var(--ms-muted);font-size:.91rem;}
+.ms-signal {display:inline-block;border:1px solid var(--ms-border);background:var(--ms-elevated);border-radius:7px;padding:.15rem .45rem;font-size:.8rem;font-weight:750;margin-top:.25rem;color:var(--ms-text);}
+.ms-signal.weak {border-color:var(--ms-bad);}
+.ms-signal.missing {border-color:var(--ms-warn);}
+.ms-signal.ok {border-color:var(--ms-good);}
+
+.ms-kpi {background:var(--ms-panel);border:1px solid var(--ms-border);border-radius:16px;padding:1.05rem 1.0rem 1rem;min-height:170px;margin-bottom:.35rem;}
+.ms-kpi-top {color:var(--ms-muted);font-weight:750;font-size:.89rem;min-height:2rem;line-height:1.4;}
+.ms-kpi-val {color:var(--ms-text);font-weight:820;font-size:clamp(1.45rem,2vw,2.2rem);letter-spacing:-.04em;margin:.38rem 0 .6rem;white-space:nowrap;}
+.ms-kpi-bottom {color:var(--ms-faint);font-size:.87rem;}
+.ms-note {background:var(--ms-panel);border:1px solid var(--ms-border);border-radius:16px;padding:1.3rem 1.45rem;color:var(--ms-text);font-size:1.03rem;line-height:1.7;margin:.8rem 0 1.25rem;}
+.ms-note strong {color:var(--ms-text);}
+.ms-detail {background:var(--ms-panel);border:1px solid var(--ms-border);border-radius:16px;padding:1.2rem 1.4rem;font-size:1.01rem;line-height:1.65;color:var(--ms-muted);margin:.45rem 0;}
+.ms-detail strong {color:var(--ms-text);}
+.ms-flag {display:inline-block;border:1px solid var(--ms-border);background:var(--ms-elevated);padding:.46rem .72rem;border-radius:9px;font-size:.86rem;color:var(--ms-text);margin:.18rem .34rem .24rem 0;}
+.ms-flag.weak {border-color:var(--ms-bad);}
+.ms-flag.ok {border-color:var(--ms-good);}
+.ms-flag.missing {border-color:var(--ms-warn);}
+.ms-finding {background:var(--ms-panel);border:1px solid var(--ms-border);border-radius:16px;padding:1.3rem 1.35rem;min-height:186px;}
+.ms-finding strong {color:var(--ms-text);font-size:1.16rem;}
+.ms-finding p {color:var(--ms-muted);font-size:.97rem;line-height:1.6;margin:.6rem 0 0;}
+.ms-footnote {color:var(--ms-faint);font-size:.85rem;line-height:1.65;margin:.6rem 0 1rem;}
+.ms-sidebar-foot {color:var(--ms-faint);font-size:.82rem;line-height:1.6;margin-top:1.4rem;}
+@media(max-width:900px){.block-container{padding-top:1.4rem}.ms-title{font-size:2.45rem}.ms-mode-card{min-height:0}.ms-kpi{min-height:145px}.ms-kpi-val{white-space:normal}.ms-research-card{display:block}.ms-benchmark-head{display:none}.ms-benchmark-row{display:block}.ms-benchmark-row > div{margin-bottom:.3rem}}
+</style>""" % dict(c, scheme="light" if st.session_state.get("ms_theme") == "Light" else "dark")
 
 
 def safe_float(value):
@@ -296,23 +371,17 @@ def kpi_cards(snapshot):
     columns = st.columns(5, gap="small")
     for col, key in zip(columns, DISPLAY_ORDER):
         spec = INDICATORS[key]
-        value = safe_float(snapshot.get(spec["field"]))
+        raw_value = safe_float(snapshot.get(spec["field"]))
+        value = raw_value if is_usable(snapshot, key) else None
         reference = snapshot.get(spec["reference"])
-        quality = snapshot["quality"].get(key, "UNKNOWN")
-        if value is None:
-            status = "Not available"
-        elif quality == "KNOWN_GAP":
-            status = "Prior gap in history"
-        elif is_usable(snapshot, key):
-            status = "Source OK"
-        else:
-            status = "Check data quality"
+        # Dates remain visible because economic series are released on different schedules.
+        status = pretty_month(reference) if value is not None else "Not available"
         with col:
             st.markdown(
                 f'<div class="ms-kpi">'
                 f'<div class="ms-kpi-top">{text(spec["measure"])}</div>'
                 f'<div class="ms-kpi-val">{text(as_metric_value(value, spec))}</div>'
-                f'<div class="ms-kpi-bottom">{text(pretty_month(reference))} · {text(status)}</div>'
+                f'<div class="ms-kpi-bottom">{text(status)}</div>'
                 f'</div>', unsafe_allow_html=True,
             )
 
@@ -382,30 +451,103 @@ def section_heading(title, subtitle=None):
         st.caption(subtitle)
 
 
-def economic_insights(snapshot):
-    """One visible takeaway; details are opt-in."""
-    summary, flags, combined = interpret(snapshot)
-    section_heading("Economic picture", "Transparent indicator thresholds, not a recession probability.")
-    st.markdown(
-        f'<div class="ms-note"><strong>At this information cutoff</strong><div style="margin-top:.32rem">{text(summary)}</div></div>',
-        unsafe_allow_html=True,
-    )
-    weak = [(title, status, desc) for title, status, desc in flags if status == "Deteriorating"]
-    unknown = [(title, status, desc) for title, status, desc in flags if status == "Unavailable"]
-    if weak:
-        st.caption("Deteriorating under defined thresholds: " + ", ".join(t for t, _, _ in weak) + ".")
-    if unknown:
-        st.caption("Incomplete assessment: " + ", ".join(t for t, _, _ in unknown) + " requires additional data.")
-    with st.expander("See how the five indicators contributed"):
-        for name, status, description in flags:
-            st.markdown(f"**{name} — {status}**  \n{description}")
-        st.divider()
-        if combined is True:
-            st.info("The exploratory V5 Treasury + housing rule is active. It generated false warnings historically and is not a validated recession forecast.")
-        elif combined is False:
-            st.caption("The exploratory V5 Treasury + housing rule is not active. That does not rule out a recession.")
+def unemployment_history_gap(snapshot):
+    """Explain the verified 2025-10 gap only when it affects the Sahm window.
+
+    The Sahm calculation needs the newest three-month average and the 12
+    preceding three-month averages: 15 consecutive monthly observations.
+    """
+    reference = snapshot.get("unemployment_reference_month")
+    if not reference:
+        return False
+    try:
+        year, month = map(int, str(reference).split("-"))
+    except (ValueError, TypeError):
+        return False
+    distance = (year - 2025) * 12 + month - 10
+    return 0 <= distance <= 14 and snapshot["quality"].get("unemployment") == "KNOWN_GAP"
+
+
+def benchmark_rows(snapshot):
+    """Descriptive benchmarks match existing signal rules, not invented grades."""
+    rows = []
+    for key, name, field, threshold, why in (
+        ("treasury_spread", "Yield curve", "treasury_spread_pp",
+         "Warning when below 0 pp (inverted)",
+         "Short-term interest rates exceed long-term rates. Inversions have preceded some recessions, but are not a prediction."),
+        ("housing_permits", "Housing", "permits_growth_12m_pct",
+         "Warning when below 0% year over year",
+         "Fewer building permits than a year ago can signal cooling construction."),
+        ("payrolls", "Jobs", "payroll_growth_12m_pct",
+         "Warning when below 0% year over year",
+         "Payroll employment has fallen over the year, a sign of labor-market weakness."),
+        ("industrial_production", "Industry", "industrial_growth_12m_pct",
+         "Warning when below 0% year over year",
+         "Output has contracted compared with a year ago, indicating weaker industrial activity."),
+        ("unemployment", "Unemployment trend (Sahm)", "unemployment_sahm_pp",
+         "Warning at 0.50 pp or higher",
+         "The unemployment rate's three-month average has risen sharply relative to the previous year's low."),
+    ):
+        value = safe_float(snapshot.get(field)) if is_usable(snapshot, key, field) else None
+        display = (f"{value:+.2f} pp" if value is not None and key in ("treasury_spread", "unemployment")
+                   else f"{value:+.2f}%" if value is not None else "Not available")
+        if value is None:
+            label, style = "Not enough data", "missing"
+            if key == "unemployment":
+                if unemployment_history_gap(snapshot):
+                    why = ("The unemployment rate itself is available. The October 2025 household survey wasn't collected "
+                           "during the federal shutdown, so the separate Sahm calculation lacks the monthly history it needs.")
+                else:
+                    why = ("The unemployment rate may still be available, but the full monthly history "
+                           "needed for the Sahm measure is incomplete at this date.")
+            else:
+                why = "There is insufficient validated source data at this date. " + why
+        elif (value >= .5 if key == "unemployment" else value < 0):
+            label, style = "Warning threshold crossed", "weak"
         else:
-            st.caption("The exploratory V5 combined rule cannot be assessed from the available data.")
+            label, style = "No warning threshold crossed", "ok"
+        rows.append({"name": name, "value": display, "label": label,
+                     "style": style, "threshold": threshold, "why": why})
+    return rows
+
+
+def economic_insights(snapshot):
+    """Plain-language interpretation plus visible, numeric, contextual benchmarks."""
+    _, flags, _ = interpret(snapshot)
+    weak = [description for _, status, description in flags if status == "Deteriorating"]
+    steady = [name for name, status, _ in flags if status == "No threshold breach"]
+    missing = [name for name, status, _ in flags if status == "Unavailable"]
+    observed = len(flags) - len(missing)
+    if observed < 3:
+        narrative = "Not enough indicators are available for a complete picture."
+    elif weak:
+        narrative = " ".join(weak)
+    else:
+        narrative = "None of the available indicators crosses its defined warning threshold."
+    if steady and weak:
+        narrative += " Other available signals have not crossed their warning levels."
+    if missing:
+        if "Unemployment" in missing and is_usable(snapshot, "unemployment"):
+            narrative += " The unemployment rate is available, but its separate Sahm warning cannot be calculated."
+            missing.remove("Unemployment")
+        if missing:
+            narrative += " Unable to assess: " + ", ".join(missing) + "."
+    st.markdown('<div class="ms-section">What the numbers suggest</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="ms-note">{text(narrative)}</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ms-section">How these readings compare with warning levels</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ms-footnote">The numbers below show the specific thresholds used for the labels above. They are not universal good or bad ranges.</div>', unsafe_allow_html=True)
+    rows = benchmark_rows(snapshot)
+    cells = ['<div class="ms-benchmark-head"><div>Indicator</div><div>Reading and status</div><div>Benchmark and why it matters</div></div>', '<div class="ms-benchmark">']
+    for row in rows:
+        cells.append(f'<div class="ms-benchmark-row">'
+                     f'<div class="ms-benchmark-name">{text(row["name"])}</div>'
+                     f'<div><div class="ms-benchmark-value">{text(row["value"])}</div>'
+                     f'<span class="ms-signal {text(row["style"])}">{text(row["label"])}</span></div>'
+                     f'<div class="ms-benchmark-hint"><strong>{text(row["threshold"])}</strong><div>{text(row["why"])}</div></div>'
+                     f'</div>')
+    cells.append('</div>')
+    st.markdown(''.join(cells), unsafe_allow_html=True)
+    st.markdown('<div class="ms-footnote">Thresholds flag specific types of deterioration. Crossing one does not mean a recession is certain, and staying below it does not mean the economy is safe.</div>', unsafe_allow_html=True)
 
 
 def hero(label, title, description):
@@ -455,31 +597,31 @@ def cached_chart_df(df, key, through_month, months=36):
 def plot_history(df, key, note=None):
     spec = INDICATORS[key]
     if df.empty or df["value"].notna().sum() == 0:
-        st.info("No usable historical chart observations for this indicator and date.")
+        st.info("No observations are available for this indicator and time period.")
         return
+    c = palette()
     figure = go.Figure()
     figure.add_trace(go.Scatter(
         x=df["date"], y=df["value"], mode="lines",
-        line={"color": spec["color"], "width": 2.8},
-        fill="tozeroy" if key != "unemployment" else None,
-        fillcolor="rgba(85,125,180,0.07)",
+        line={"color": c["chart"], "width": 3.2},
         hovertemplate=f"%{{x|%b %Y}}<br>%{{y:.2f}} {spec['chart_unit']}<extra></extra>",
         connectgaps=False,
     ))
-    if key == "treasury_spread":
-        figure.add_hline(y=0, line_color="#687B99", line_dash="dot", line_width=1)
+    if key in ("treasury_spread", "payrolls", "industrial_production", "housing_permits"):
+        figure.add_hline(y=0, line_color=c["faint"], line_dash="dot", line_width=1)
     figure.update_layout(
-        template="plotly_dark", height=345,
-        margin=dict(l=5,r=14,t=10,b=5),
+        template="none", height=410, margin=dict(l=5, r=14, t=16, b=8),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#B8C5DA",size=12),
-        xaxis=dict(showgrid=False, title=None),
-        yaxis=dict(showgrid=True, gridcolor="#233249", title=spec["chart_unit"], zeroline=False),
+        font=dict(color=c["text"], size=14),
+        xaxis=dict(showgrid=False, title=None, color=c["text"], tickfont=dict(color=c["text"], size=13)),
+        yaxis=dict(showgrid=True, gridcolor=c["border"], title=dict(text=spec["chart_unit"], font=dict(color=c["text"])),
+                   zeroline=False, color=c["text"], tickfont=dict(color=c["text"], size=13)),
+        hoverlabel=dict(bgcolor=c["panel"], bordercolor=c["border"], font=dict(color=c["text"], size=14)),
         showlegend=False, hovermode="x unified",
     )
     st.plotly_chart(figure, width="stretch", config={"displayModeBar": False})
     if note:
-        st.caption(note)
+        st.markdown(f'<div class="ms-footnote">{text(note)}</div>', unsafe_allow_html=True)
 
 
 def detail_table(snapshot):
@@ -525,91 +667,137 @@ def navigate(page):
 
 
 def landing():
-    """A two-path home page, deliberately free of network requests."""
-    hero(
-        "MACROSCRIPT · ECONOMIC RESEARCH",
-        "Understand the economy. Now or then.",
-        "Explore up-to-date U.S. economic indicators, or travel back to see what data was actually available to decision-makers at a past date.",
-    )
+    """No network calls on the home screen."""
+    hero("UNDERSTAND THE U.S. ECONOMY", "One economy. Two ways to explore it.",
+         "See what is happening today, or travel to the past and see what people actually knew at the time.")
     left, right = st.columns(2, gap="large")
     with left:
         st.markdown("""<div class="ms-mode-card">
-          <div class="ms-step-title">Mode 01 · Current conditions</div>
-          <div class="ms-mode-icon">📡</div>
-          <div class="ms-mode-title">Today's Economy</div>
-          <div class="ms-mode-description">Request the latest readings from FRED, see the five core indicators and a concise interpretation. Each series shows its own observation month.</div>
+            <div class="ms-mode-number">01 / The present</div>
+            <div class="ms-mode-symbol">◉</div>
+            <div class="ms-mode-title">Today's Economy</div>
+            <div class="ms-mode-description">Five key readings, clear explanations, and easy-to-explore charts.</div>
+            <div class="ms-mode-why"><strong>Choose this to:</strong> Understand the latest picture without sorting through raw economic data.</div>
         </div>""", unsafe_allow_html=True)
-        if st.button("View today's economy", type="primary", width="stretch", key="home_today"):
+        if st.button("Explore today's economy", type="primary", width="stretch", key="home_today"):
             navigate("Today")
     with right:
         st.markdown("""<div class="ms-mode-card">
-          <div class="ms-step-title">Mode 02 · Historical perspective</div>
-          <div class="ms-mode-icon">🕰️</div>
-          <div class="ms-mode-title">Time Machine</div>
-          <div class="ms-mode-description">Choose a date and inspect historical ALFRED observations—before later releases and revisions changed the historical picture.</div>
+            <div class="ms-mode-number">02 / The past</div>
+            <div class="ms-mode-symbol">◷</div>
+            <div class="ms-mode-title">Time Machine</div>
+            <div class="ms-mode-description">Pick a historical date. Explore the economy using only information available then.</div>
+            <div class="ms-mode-why"><strong>Choose this to:</strong> See why the past often looks different after later data releases and revisions.</div>
         </div>""", unsafe_allow_html=True)
-        if st.button("Explore a historical date", width="stretch", key="home_history"):
+        if st.button("Explore the past", type="primary", width="stretch", key="home_history"):
             navigate("Time Machine")
-    st.markdown('<div class="ms-section">Why look backward?</div>', unsafe_allow_html=True)
-    st.markdown("""<div class="ms-note">
-    <strong>What we know today is not always what was known then.</strong>
-    Employment, production, and other economic figures are released on different schedules and may be revised.
-    A historical analysis using only today's revised data can accidentally give the past information it did not have.
-    MacroScript lets you compare those perspectives—without presenting unvalidated recession predictions.
-    </div>""", unsafe_allow_html=True)
-    st.caption("Built with FRED / ALFRED data. Advanced indicator tools and V5–V6 forecasting research are available in the sidebar.")
+    st.markdown('''<div class="ms-research-card">
+        <div><div class="ms-mode-number">Behind the numbers</div><div class="ms-research-title">Research findings</div></div>
+        <div class="ms-research-copy">Can these indicators predict a recession? Explore what our historical tests found, what failed, and why we don't publish a probability forecast.</div>
+    </div>''', unsafe_allow_html=True)
+    if st.button("Explore the research findings", width="stretch", key="home_research"):
+        navigate("Research")
+    st.markdown('<div class="ms-footnote">Economic data: FRED and ALFRED. Research and education, not a recession forecast.</div>', unsafe_allow_html=True)
+
+
+def indicator_journey(snapshot, chart_data, history_note=None, suffix="today"):
+    """One integrated visible chart for each mode, not a separate indicator page."""
+    st.markdown('<div class="ms-section">Explore an indicator</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ms-footnote">Choose what you want to understand. The chart and explanation update together.</div>', unsafe_allow_html=True)
+    short = {"unemployment":"Unemployment", "payrolls":"Jobs", "industrial_production":"Industry", "housing_permits":"Housing", "treasury_spread":"Yield curve"}
+    selection_key = f"{suffix}_metric"
+    st.session_state.setdefault(selection_key, DISPLAY_ORDER[0])
+    choices = st.columns(5, gap="small")
+    for col, option in zip(choices, DISPLAY_ORDER):
+        with col:
+            if st.button(short[option], key=f"{suffix}_choose_{option}",
+                         type="primary" if st.session_state[selection_key] == option else "secondary",
+                         width="stretch"):
+                st.session_state[selection_key] = option
+                st.rerun()
+    selected = st.session_state[selection_key]
+    spec = INDICATORS[selected]
+    status = next((entry for entry in interpret(snapshot)[1] if entry[0] == {
+        "unemployment":"Unemployment", "payrolls":"Employment", "industrial_production":"Industry",
+        "housing_permits":"Housing", "treasury_spread":"Yield curve"}[selected]), None)
+    a, b = st.columns([2.7, 1], gap="large")
+    with a:
+        st.markdown(f'<div class="ms-section">{text(spec["chart_title"])}</div>', unsafe_allow_html=True)
+    with b:
+        lookback_key = f"{suffix}_years"
+        st.session_state.setdefault(lookback_key, 60)
+        time_cols = st.columns(3, gap="small")
+        for col, period, label in zip(time_cols, (12, 36, 60), ("1Y", "3Y", "5Y")):
+            with col:
+                if st.button(label, key=f"{suffix}_period_{period}",
+                             type="primary" if st.session_state[lookback_key] == period else "secondary",
+                             width="stretch"):
+                    st.session_state[lookback_key] = period
+                    st.rerun()
+        lookback = st.session_state[lookback_key]
+    plot_history(chart_data(selected, lookback), selected, history_note)
+    value = as_metric_value(safe_float(snapshot.get(spec["field"])) if is_usable(snapshot, selected) else None, spec)
+    ref = pretty_month(snapshot.get(spec["reference"]))
+    status_detail = status[2] if status else ""
+    if selected == "unemployment" and is_usable(snapshot, selected) and not is_usable(snapshot, selected, "unemployment_sahm_pp"):
+        status_detail = ("This unemployment rate is available, but the separate Sahm trend warning cannot be calculated. "
+                         + ("October 2025 survey data were not collected during the federal shutdown." if unemployment_history_gap(snapshot)
+                            else "It needs a longer uninterrupted history."))
+    elif snapshot["quality"].get(selected) == "KNOWN_GAP":
+        status_detail += " Some earlier observations are missing, so certain trend measures are incomplete."
+    elif not is_usable(snapshot, selected):
+        status_detail += " This reading could not be validated with the available source data."
+    st.markdown(f'<div class="ms-detail"><strong>{text(spec["measure"])}: {text(value)}</strong> · {text(ref)}'
+                f'<div style="margin-top:.42rem">{text(spec["detail"])} {text(status_detail)}</div></div>',
+                unsafe_allow_html=True)
+
+
+def download_snapshot(snapshot, key="today"):
+    rows = []
+    for metric in DISPLAY_ORDER:
+        spec = INDICATORS[metric]
+        rows.append({"Indicator": spec["measure"], "Value": as_metric_value(safe_float(snapshot.get(spec["field"])), spec),
+                     "Reference month": pretty_month(snapshot.get(spec["reference"])),
+                     "Source": ", ".join(spec["sources"]), "Data quality": snapshot["quality"].get(metric, "UNKNOWN")})
+    data = pd.DataFrame(rows).to_csv(index=False).encode("utf-8")
+    st.download_button("Download readings (CSV)", data=data,
+                       file_name=f"macroscript_{key}_{snapshot['as_of']}.csv", mime="text/csv")
 
 
 def today_view():
-    hero(
-        "MODE 01 · FRED API",
-        "Today's U.S. economy.",
-        "See the latest published readings and a brief, rule-based interpretation. Observations have different release schedules and reference months.",
-    )
+    hero("THE CURRENT PICTURE", "Today's U.S. economy",
+         "A clear look at five economic indicators, what they mean, and how they have changed.")
     if not get_api_key():
-        st.warning("Add FRED_API_KEY to V7/.env to retrieve live observations. Historical month-end snapshots remain available offline in Time Machine.")
+        st.warning("Add your FRED API key to the local .env file to view current readings. The Time Machine's saved dates work offline.")
         return
-    if st.button("↻  Request latest FRED readings" if not st.session_state.get("today_loaded") else "↻  Refresh latest readings", 
-                 type="primary", key="fetch_today"):
-        if st.session_state.get("today_loaded"):
+    _, refresh_col = st.columns([5, 1.6])
+    with refresh_col:
+        if st.button("↻ Refresh data", width="stretch", key="refresh_today"):
             api_bundle.clear()
-        st.session_state["today_loaded"] = True
-        st.rerun()
-    if not st.session_state.get("today_loaded"):
-        st.markdown('<div class="ms-note"><strong>Ready when you are.</strong> This page makes no API call until you request one. The five economic series are checked for missing values and historical-data gaps.</div>', unsafe_allow_html=True)
-        return
+            st.rerun()
     bundle = load_selected_api("present", date.today().isoformat())
     if bundle is None:
         return
     snapshot = snapshot_from_bundle(bundle)
-    st.caption(f"Information cutoff: {snapshot['as_of']} · FRED data (cached for up to one hour unless refreshed) · Each card identifies its own observation month")
+    st.markdown(f'<div class="ms-mini-title">Latest readings · checked {text(snapshot["as_of"])}</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ms-footnote">Each reading shows its own reference month because economic data is released on different dates.</div>', unsafe_allow_html=True)
     kpi_cards(snapshot)
     economic_insights(snapshot)
-    with st.expander("Explore an indicator's trend"):
-        a, b = st.columns([2, 1], gap="large")
-        with a:
-            selected = st.selectbox("Indicator", options=DISPLAY_ORDER,
-                                    format_func=lambda x: INDICATORS[x]["measure"], key="overview_metric")
-        with b:
-            lookback = st.selectbox("Chart history", [12,24,36,60], index=2,
-                                    format_func=lambda n: f"Last {n} months", key="overview_history")
-        plot_history(observation_chart_df(bundle, selected, lookback), selected)
-        st.caption(INDICATORS[selected]["detail"])
-    with st.expander("Data sources, freshness and export"):
-        detail_table(snapshot)
+    indicator_journey(snapshot, lambda k, months: observation_chart_df(bundle, k, months),
+                      "FRED data can be revised after it is first published.", suffix="today")
+    st.markdown('<div class="ms-footnote">Source: Federal Reserve Economic Data (FRED). All numbers describe observed economic conditions; they do not predict recessions.</div>', unsafe_allow_html=True)
+    download_snapshot(snapshot)
 
 
-def vintage_comparison(snapshot):
-    """Match the *reference month* before reporting differences, not the decision month."""
+def revised_comparison_records(snapshot):
+    """Match the original and revised features by their economic reference month."""
     if snapshot["as_of"][:7] > "2024-12":
-        st.caption("The archived revised research dataset ends in December 2024. No revised comparison is available for this date.")
-        return
+        return []
     try:
         revised = cached_revised().set_index("month", drop=False)
-    except (OSError, ValueError) as exc:
-        st.warning(f"Revised comparison unavailable: {exc}")
-        return
-    records = []
+    except (OSError, ValueError):
+        return []
+    rows = []
     for key in DISPLAY_ORDER:
         spec = INDICATORS[key]
         reference = snapshot.get(spec["reference"])
@@ -622,235 +810,168 @@ def vintage_comparison(snapshot):
         present = safe_float(revised_row[spec["field"]])
         if present is None:
             continue
-        records.append({
-            "Indicator": spec["measure"],
-            "Matching reference": pretty_month(reference),
-            "At historical cutoff": round(original,3),
-            "Revised research archive": round(present,3),
-            "Difference (revised − original)": round(present - original,3),
-            "Units": spec["unit"],
-        })
-    if records:
-        st.dataframe(pd.DataFrame(records), hide_index=True, width="stretch")
-    else:
-        st.info("No features can be aligned to the same reference month in the archived research dataset.")
-    st.caption("Reference-period alignment prevents mistaken comparisons with data that had not yet been published. The right-hand column is a saved revised research extract, not a live 2026 revision query. Derived growth measures can change because their underlying history was revised.")
+        rows.append((key, original, present, reference))
+    return rows
+
+
+def revised_comparison(snapshot):
+    rows = revised_comparison_records(snapshot)
+    if not rows:
+        st.caption("A matching revised-data comparison is not available for this date.")
+        return
+    st.markdown('<div class="ms-section">How later revisions changed the record</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ms-footnote">Each pair refers to the same economic month, so we do not confuse revisions with newly published months.</div>', unsafe_allow_html=True)
+    columns = st.columns(min(3, len(rows)), gap="small")
+    for idx, (key, original, revised, reference) in enumerate(rows):
+        spec = INDICATORS[key]
+        with columns[idx % len(columns)]:
+            st.markdown(f'<div class="ms-detail"><div class="ms-mini-title">{text(spec["name"])}</div>'
+                        f'<div style="margin-top:.55rem"><strong>Then:</strong> {text(as_metric_value(original, spec))}</div>'
+                        f'<div><strong>Later:</strong> {text(as_metric_value(revised, spec))}</div>'
+                        f'<div class="ms-footnote">Same reference: {text(pretty_month(reference))}</div></div>',
+                        unsafe_allow_html=True)
+    st.markdown('<div class="ms-footnote">These later values come from the saved revised research archive through December 2024, not a current live revision query.</div>', unsafe_allow_html=True)
 
 
 def time_machine():
-    hero(
-        "MODE 02 · ALFRED TIME MACHINE",
-        "What was known on that date?",
-        "Recreate a historical economic information set, instead of looking backward with figures that may have been published or revised afterward.",
-    )
-    st.markdown('<div class="ms-small-note"><strong>Why it matters:</strong> Later data releases and revisions can make the past look clearer than it did to policymakers, analysts, and investors at the time.</div>', unsafe_allow_html=True)
-    historical_modes = ["Custom ALFRED date"]
-    if MONTHLY_CSV.is_file():
-        historical_modes.insert(0, "Archived month-end snapshot")
-    else:
-        st.info("The optional offline month-end archive is not included in this public copy. "
-                "Choose a custom date to retrieve an ALFRED vintage with your FRED API key.")
-    mode = st.radio("Choose a historical source", historical_modes,
-                    horizontal=True, key="tm_source")
-    df = None
+    hero("TRAVEL BACK IN TIME", "What did the economy look like then?",
+         "Choose a date to see what economic data was actually available at that time, without looking ahead.")
+    try:
+        archive = cached_monthly() if MONTHLY_CSV.is_file() else None
+    except (OSError, ValueError):
+        archive = None
+    a, b = st.columns([1.2, 2.4], gap="large")
+    with a:
+        selected = st.date_input("Choose a historical date", value=date(2007, 11, 30),
+                                 min_value=date(1959, 1, 1), max_value=date.today(),
+                                 key="tm_date")
+    with b:
+        st.markdown('<div class="ms-detail"><strong>Why historical dates matter</strong><div style="margin-top:.28rem">Economic figures are published gradually and can be revised. Looking at today’s numbers may misrepresent what people knew then.</div></div>', unsafe_allow_html=True)
+    requested = selected.isoformat()
+    month = requested[:7]
+    last_day = calendar.monthrange(selected.year, selected.month)[1]
+    archived_months = set(archive["month"].astype(str)) if archive is not None else set()
+    is_archived = selected.day == last_day and month in archived_months
     bundle = None
-    if mode == "Archived month-end snapshot":
-        try:
-            df = cached_monthly()
-        except (OSError, ValueError) as exc:
-            st.error(f"Cannot read historical snapshot archive: {exc}")
-            return
-        available = list(reversed(df["month"].astype(str).tolist()))
-        default = "2007-11" if "2007-11" in available else available[0]
-        if st.session_state.get("selected_historical_month") not in available:
-            st.session_state["selected_historical_month"] = default
-        chosen = st.selectbox(
-            "Historical month", available, key="selected_historical_month", format_func=lambda m: datetime.strptime(m, "%Y-%m").strftime("%B %Y"),
-        )
-        snapshot = cached_snapshot(df, chosen)
-        st.caption(f"As known on {snapshot['as_of']} · Saved ALFRED-derived month-end snapshot · Offline archive: 1999–2024")
+    if is_archived:
+        snapshot = cached_snapshot(archive, month)
+        st.markdown(f'<div class="ms-mini-title">As known on {text(requested)} · Saved historical snapshot</div>', unsafe_allow_html=True)
     else:
-        chosen_date = st.date_input(
-            "Historical information cutoff", value=date(2007, 11, 30),
-            min_value=date(1959, 1, 1), max_value=date.today(), key="tm_custom_day",
-        )
-        st.caption("This mode queries ALFRED for the chosen day. Its historical vintages may not exist for all indicators; intraday release timing is not reconstructed.")
-        if st.button("Retrieve this historical date", type="primary", key="fetch_custom_history"):
-            st.session_state["tm_custom_loaded"] = chosen_date.isoformat()
-        if st.session_state.get("tm_custom_loaded") != chosen_date.isoformat():
-            st.info("Choose a date and select **Retrieve this historical date** to make an ALFRED request.")
+        if not get_api_key():
+            st.info("That date needs a historical data request. Add a FRED API key, or select a saved month-end date from 1999–2024.")
             return
-        bundle = load_selected_api("time_machine", chosen_date.isoformat())
+        if st.button("View this date", type="primary", key="load_tm"):
+            st.session_state["tm_loaded_date"] = requested
+        if st.session_state.get("tm_loaded_date") != requested:
+            st.markdown('<div class="ms-footnote">Select “View this date” to retrieve its historical data from ALFRED.</div>', unsafe_allow_html=True)
+            return
+        bundle = load_selected_api("time_machine", requested)
         if bundle is None:
             return
         snapshot = snapshot_from_bundle(bundle)
-        st.caption(f"ALFRED vintage information cutoff: {snapshot['as_of']} · Date-level reconstruction")
-    section_heading("Information available at the cutoff")
+        st.markdown(f'<div class="ms-mini-title">Information available on {text(requested)} · Historical data</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ms-section">The economy at that date</div>', unsafe_allow_html=True)
     kpi_cards(snapshot)
     economic_insights(snapshot)
-    with st.expander("How does today's revised record compare?"):
-        st.markdown("The comparison uses the **same observation reference month** wherever possible. Differences can reflect revisions to the source data, including the components of derived growth rates.")
-        vintage_comparison(snapshot)
-    with st.expander("Explore a historical indicator trend"):
-        a, b = st.columns([2, 1], gap="large")
-        with a:
-            selected = st.selectbox("Indicator", DISPLAY_ORDER,
-                                    format_func=lambda x: INDICATORS[x]["measure"], key="tm_metric")
-        with b:
-            lookback = st.selectbox("History", [12,24,36,60], index=2,
-                                     format_func=lambda n: f"Last {n} months", key="tm_months")
-        if bundle is not None:
-            plot_history(observation_chart_df(bundle, selected, lookback), selected,
-                         "All points belong to the ALFRED vintage at the selected cutoff; graph dates identify economic reference periods, not release times.")
-        else:
-            plot_history(cached_chart_df(df, selected, snapshot["as_of"][:7], lookback), selected,
-                         "Each point represents a separate month-end information set, not a single fixed-vintage history. Reference months may differ.")
-    with st.expander("Underlying sources, freshness and export"):
-        detail_table(snapshot)
-
-
-def indicator_explorer():
-    hero("INDICATOR EXPLORER", "One signal at a time.",
-         "Examine the definition, data lineage, and trend of each major economic measure without collapsing them into one opaque score.")
-    sources = ["Live FRED"]
-    if MONTHLY_CSV.is_file():
-        sources.append("Archived month-end snapshots")
-    source = st.radio("Data source", sources, horizontal=True)
-    bundle = None
-    df = None
-    if source == "Live FRED":
-        bundle = load_selected_api("present", date.today().isoformat())
-        if bundle is None:
-            return
-        snapshot = snapshot_from_bundle(bundle)
-    else:
-        try:
-            df = cached_monthly()
-        except (OSError, ValueError) as exc:
-            st.error(str(exc))
-            return
-        selected_month = st.selectbox("Latest snapshot month", list(reversed(df["month"].astype(str).tolist())),
-                                      format_func=pretty_month, key="explorer_month")
-        snapshot = cached_snapshot(df, selected_month)
-    selector = st.selectbox("Economic series", DISPLAY_ORDER,
-                            format_func=lambda x: INDICATORS[x]["name"], key="exp_indicator")
-    spec = INDICATORS[selector]
-    value = safe_float(snapshot.get(spec["field"]))
-    st.metric(label=spec["measure"], value=as_metric_value(value, spec))
-    st.caption(f"Reference: {pretty_month(snapshot.get(spec['reference']))} · FRED IDs: {', '.join(spec['sources'])} · Quality: {snapshot['quality'][selector]}")
-    st.markdown(f'<div class="ms-note">{text(spec["detail"])}</div>', unsafe_allow_html=True)
-    duration = st.select_slider("Chart period (months)", options=[12,24,36,60,120], value=60)
     if bundle is not None:
-        data = observation_chart_df(bundle, selector, duration)
+        chart = lambda k, months: observation_chart_df(bundle, k, months)
+        note = "Chart values come from the ALFRED vintage available at this selected date."
     else:
-        data = cached_chart_df(df, selector, snapshot["as_of"][:7], duration)
-    plot_history(data, selector,
-                 "Historical cached points use their own monthly information cutoffs." if bundle is None else "Live FRED data may include revisions to older reference periods.")
-    with st.expander("Feature methodology"):
-        if selector == "unemployment":
-            st.write("The Sahm Rule feature compares the latest three-month unemployment-rate average with the lowest three-month average from the preceding 12 months. A 0.50 percentage-point difference triggers the descriptive threshold.")
-        elif selector == "treasury_spread":
-            st.write("Monthly GS10 yield minus monthly TB3MS yield, measured in percentage points. Both yields must have the same reference month. The monthly spread is distinct from the daily T10Y3M series.")
-        else:
-            st.write("Twelve-month percentage growth = 100 × (latest level / level exactly twelve calendar months earlier − 1). Missing calendar months are not interpolated.")
-        st.write("A historical information cutoff does not imply every reference-period observation had been released. All current-vs-historical interpretations preserve the source and vintage distinction.")
+        chart = lambda k, months: cached_chart_df(archive, k, snapshot["as_of"][:7], months)
+        note = "Each point is what the archive recorded at that month-end, not one fixed-vintage series."
+    indicator_journey(snapshot, chart, note, suffix="history")
+    if snapshot["as_of"][:7] <= "2024-12":
+        if st.toggle("Compare with figures published later", value=False, key="tm_revisions"):
+            revised_comparison(snapshot)
+    download_snapshot(snapshot, key="historical")
+    st.markdown('<div class="ms-footnote">Historical observations do not include future outcome labels. Some sources or calculated measures may be missing at a selected cutoff.</div>', unsafe_allow_html=True)
 
 
 def research_lab():
-    hero("RESEARCH ARCHIVE · V5–V6", "What the forecasting research found.",
-         "Reproducible recession-warning experiments, chronological model evaluation, and a documented decision not to deploy unvalidated recession probabilities.")
-    st.markdown('<div class="ms-note"><strong>Research conclusion.</strong> Some interest-rate-augmented models performed better than simple historical benchmarks in retrospective tests. But the improvement was not robust to the shorter origin-vintage training experiment, the most recent period showed excessive warnings, and the evaluation had no untouched future holdout. No live recession probability is published here.</div>', unsafe_allow_html=True)
-    scores_path = AUDIT / "v6_final_regime_scores.csv"
-    origin_path = AUDIT / "v6_final_origin_scores.csv"
-    if not scores_path.is_file() or not origin_path.is_file():
-        st.warning("V6 research summary CSVs not found; ensure you extracted the complete V7 starter.")
+    hero("BEHIND THE RESEARCH", "What our recession research taught us",
+         "We tested whether economic indicators could provide reliable recession warnings. The evidence did not justify publishing a live prediction.")
+    cards = st.columns(3, gap="medium")
+    findings = (
+        ("Promising in hindsight", "Some models trained on revised history beat a simple baseline in retrospective comparisons."),
+        ("Not reliable enough", "When we trained with information available closer to each historical date, performance deteriorated."),
+        ("False alarms matter", "Some models warned repeatedly during non-recession periods. A convincing chart alone is not a dependable early-warning system."),
+    )
+    for col, (heading, detail) in zip(cards, findings):
+        with col:
+            st.markdown(f'<div class="ms-finding"><strong>{text(heading)}</strong><p>{text(detail)}</p></div>', unsafe_allow_html=True)
+    path = AUDIT / "v6_final_origin_scores.csv"
+    if not path.is_file():
+        st.info("The archived research results are unavailable in this copy.")
         return
-    regular = read_research_csv(str(scores_path))
-    origin = read_research_csv(str(origin_path))
-    horizon = st.selectbox("Evaluation horizon", [3,6,12], index=2, format_func=lambda n: f"Next {n} months")
-    named = {
-        "historical_base": "Historical base rate",
-        "v5_housing_rule": "V5 housing + Treasury rule",
-        "rf5_walk": "5-indicator RF (revised-trained)",
-        "rf7_rates_walk": "7-indicator RF (revised-trained)",
-        "rf8_all_walk": "8-indicator RF (revised-trained)",
-    }
-    sample = regular.loc[(regular["stage"] == "2005-2024 PIT") &
-                         (regular["horizon"] == horizon) &
-                         regular["method"].isin(named)].copy()
-    sample["Model"] = sample["method"].map(named)
-    sample = sample.rename(columns={"brier":"Brier ↓", "log_loss":"Log loss ↓", "auc":"ROC AUC"})
-    section_heading("Matched PIT-input evaluation · 2005–2024",
-                    "The models in this table were trained on revised history. This is a historical-input sensitivity analysis, not a fully real-time-trained test.")
-    st.dataframe(sample[["Model", "Brier ↓", "Log loss ↓", "ROC AUC", "months"]].rename(columns={"months":"Months"}),
-                 hide_index=True, width="stretch",
-                 column_config={"Brier ↓":st.column_config.NumberColumn(format="%.4f"),
-                                "Log loss ↓":st.column_config.NumberColumn(format="%.4f"),
-                                "ROC AUC":st.column_config.NumberColumn(format="%.3f")})
-    origin_models = ["historical_base", "origin_rf5", "origin_rf7", "origin_rf8"]
-    values=[]
-    for method in origin_models:
-        chosen=origin.loc[(origin["horizon"] == horizon) & (origin["method"] == method)]
-        if len(chosen):
-            values.append({"Model": {
-                "historical_base": "Historical base rate", "origin_rf5": "5-indicator RF (origin-vintage)",
-                "origin_rf7": "7-indicator RF (origin-vintage)",
-                "origin_rf8": "8-indicator RF (origin-vintage)"}[method],
-                "Brier ↓": float(chosen.iloc[0]["brier"]), "Months": int(chosen.iloc[0]["months"])})
-    section_heading("Historical-origin training investigation",
-                    "Shorter 1999-onward training history and historical-vintage inputs; it cannot isolate the effects of revisions from the smaller training sample.")
-    st.dataframe(pd.DataFrame(values), hide_index=True, width="stretch",
-                 column_config={"Brier ↓":st.column_config.NumberColumn(format="%.4f")})
-    with st.expander("Methodological limitations", expanded=False):
-        st.markdown("""
-- The 2005–2024 period was repeatedly inspected; it is **not an untouched holdout**.
-- Twelve-month labels overlap, and the evaluation contains only two independent recession onsets in the later period.
-- Revised-history training is not the same as historical-vintage training.
-- The final 30-month label delay is a conservative proxy, **not** an exact NBER announcement calendar.
-- Models produced many false-warning months in some regimes, especially 2022–2024.
-- Research outcomes (`USREC` and future recession labels) are **never** passed to the live or historical dashboard as predictors.
-""")
-    report = ROOT / "research" / "MacroScript_V6_Overview.txt"
-    if report.is_file():
-        st.download_button("Download full V6 research overview", report.read_bytes(),
-                           file_name=report.name, mime="text/plain")
-    report5 = ROOT / "research" / "MacroScript_V5_Overview.txt"
-    if report5.is_file():
-        st.download_button("Download V5 warning research overview", report5.read_bytes(),
-                           file_name=report5.name, mime="text/plain")
+    audit = read_research_csv(str(path))
+    matched = audit.loc[(audit["stage"] == "PIT origin-vintage, matched for origin_rf7") & (audit["horizon"] == 12)]
+    labels = {"historical_base": "Historical baseline",
+              "rf7_rates_walk": "Model trained on revised data",
+              "origin_rf7": "Model trained on historical data"}
+    scores = []
+    for method, label in labels.items():
+        record = matched.loc[matched["method"] == method]
+        if len(record) == 1:
+            scores.append((label, float(record.iloc[0]["brier"])))
+    if len(scores) == 3:
+        section_heading("A promising result didn't hold up")
+        st.markdown('<div class="ms-footnote">Illustration: 12-month recession research, matched 2005–2024 historical-input evaluation. Brier score measures forecast error; lower is better.</div>', unsafe_allow_html=True)
+        c = palette()
+        bars = go.Figure(go.Bar(
+            x=[v for _,v in scores], y=[name for name,_ in scores], orientation="h",
+            marker_color=[c["faint"], c["good"], c["bad"]],
+            text=[f"{value:.3f}" for _,value in scores], textposition="outside",
+            textfont=dict(color=c["text"], size=14),
+            hovertemplate="Brier score: %{x:.4f}<extra></extra>"))
+        bars.update_layout(template="none", height=330, margin=dict(l=230,r=85,t=18,b=65),
+                           paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                           font=dict(color=c["text"],size=14),
+                           xaxis=dict(showgrid=True,gridcolor=c["border"],rangemode="tozero",
+                                      color=c["text"],tickfont=dict(color=c["text"],size=13),
+                                      title=dict(text="Brier score (lower is better)",font=dict(color=c["text"],size=14))),
+                           yaxis=dict(autorange="reversed",showgrid=False,automargin=True,
+                                      color=c["text"],tickfont=dict(color=c["text"],size=14)),
+                           hoverlabel=dict(bgcolor=c["panel"],bordercolor=c["border"],font=dict(color=c["text"])),
+                           showlegend=False)
+        st.plotly_chart(bars, width="stretch", config={"displayModeBar":False})
+        st.markdown('<div class="ms-note"><strong>The important insight:</strong> The revised-trained seven-indicator model looked stronger, but the historical-origin-trained version scored worse than the basic baseline. This is why we do not publish a recession probability.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ms-section">What this means</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ms-detail">The main dashboard still helps explain unemployment, jobs, production, housing, and interest rates. It does <strong>not</strong> claim that five economic indicators can reliably predict the next recession.</div>',unsafe_allow_html=True)
+    st.markdown('<div class="ms-footnote">Research limitations: the evaluation period was examined repeatedly, recession events were few, and historical-origin training used a shorter sample. This comparison does not isolate the effect of vintage revisions alone.</div>',unsafe_allow_html=True)
+    with st.container():
+        report = ROOT / "research" / "MacroScript_V6_Overview.txt"
+        if report.is_file():
+            st.download_button("Download full technical research", report.read_bytes(),
+                               file_name=report.name, mime="text/plain")
 
 
 def sidebar():
     with st.sidebar:
-        st.markdown('<div class="ms-brand">Macro<span>Script</span> <span style="font-weight:450;font-size:.72rem;color:#90A3C0">V7</span></div>',
-                    unsafe_allow_html=True)
-        st.caption("U.S. Economic Intelligence & Historical Research")
+        st.markdown('<div class="ms-brand">Macro<span>Script</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="ms-tagline">Explore the U.S. economy, past and present.</div>', unsafe_allow_html=True)
         st.divider()
-        if "page" not in st.session_state:
-            st.session_state["page"] = "Start"
         for page, title in (
-            ("Start", "⌂  Start here"),
-            ("Today", "◉  Today's economy"),
-            ("Time Machine", "◷  Time Machine"),
+            ("Start", "Home"),
+            ("Today", "Today's Economy"),
+            ("Time Machine", "Time Machine"),
+            ("Research", "Research findings"),
         ):
-            if st.button(title, width="stretch", type="primary" if st.session_state["page"] == page else "secondary", key=f"nav_{page}"):
+            if st.button(title, width="stretch",
+                         type="primary" if st.session_state["page"] == page else "secondary",
+                         key=f"nav_{page}"):
                 navigate(page)
-        with st.expander("Advanced tools", expanded=st.session_state["page"] in ("Indicator Explorer", "Research Lab")):
-            for page, title in (("Indicator Explorer", "Indicator Explorer"), ("Research Lab", "V5–V6 Research Lab")):
-                if st.button(title, width="stretch", type="primary" if st.session_state["page"] == page else "secondary", key=f"nav_{page}"):
-                    navigate(page)
         st.divider()
-        if get_api_key():
-            st.caption("● FRED API key configured")
-        else:
-            st.caption("○ No API key · cached history works offline")
-        st.markdown('<div class="ms-footer">Historical research, not investment advice or a reliable recession forecasting system.</div>',
+        st.selectbox("Appearance", list(THEMES), key="ms_theme")
+        st.link_button("View source on GitHub", GITHUB_URL, width="stretch")
+        st.markdown('<div class="ms-sidebar-foot">Data from FRED / ALFRED.<div style="margin-top:.45rem">Research and education, not investment advice or a validated recession forecast.</div></div>',
                     unsafe_allow_html=True)
     return st.session_state["page"]
 
 
 def main():
-    st.markdown(CSS, unsafe_allow_html=True)
+    st.session_state.setdefault("page", "Start")
+    st.session_state.setdefault("ms_theme", "Light")
+    st.markdown(theme_css(), unsafe_allow_html=True)
     page = sidebar()
     if page == "Start":
         landing()
@@ -858,8 +979,6 @@ def main():
         today_view()
     elif page == "Time Machine":
         time_machine()
-    elif page == "Indicator Explorer":
-        indicator_explorer()
     else:
         research_lab()
 
