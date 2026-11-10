@@ -1,7 +1,7 @@
 """Small, reusable FRED API client for V2 (latest observations only)."""
 
 import math
-from datetime import date as calendar_date
+from us_dates import us_today
 
 import requests
 
@@ -99,7 +99,7 @@ class FredClient:
                 "value": value,
                 "raw_value": str(raw_value),  # Keep FRED's original precision.
                 "observation_date": date,
-                "age_days": (calendar_date.today() - calendar_date.fromisoformat(date)).days,
+                "age_days": (us_today() - calendar_date.fromisoformat(date)).days,
                 "last_updated": metadata.get("last_updated", "Unknown")[:10],
                 "units": metadata.get("units", "Unknown"),
                 "frequency": metadata.get("frequency_short", metadata.get("frequency", "Unknown")),

@@ -12,6 +12,7 @@ import math
 from data_quality import check_history
 from fred_client import FredError
 from history import HistoricalUnavailable, get_historical_series
+from us_dates import us_today
 
 
 SERIES_IDS = (
@@ -32,11 +33,11 @@ MODES = ("present", "time_machine", "research")
 
 def _parse_date(value):
     if value is None:
-        return date.today()
+        return us_today()
 
     selected = date.fromisoformat(str(value))
 
-    if selected > date.today():
+    if selected > us_today():
         raise ValueError("Snapshot date cannot be in the future")
 
     return selected
@@ -95,9 +96,11 @@ def _clean_observations(raw_observations, cutoff):
 # ======================================
 
 def _current_vintage(client, series_id, as_of_date):
-    """Retrieve today's revised data, up to the selected date."""
+    """Retrieve current revised data, up to the selected observation date.
 
-    today = date.today().isoformat()
+    FRED defaults real-time vintage dates to its own 'today'. Not passing an
+    explicit vintage date avoids a UTC worker requesting tomorrow's vintage.
+    """
 
     start = (
         f"{max(1776, as_of_date.year - 5):04d}-01-01"
@@ -106,8 +109,6 @@ def _current_vintage(client, series_id, as_of_date):
     response = client._get_json(
         "series/observations",
         series_id=series_id,
-        realtime_start=today,
-        realtime_end=today,
         observation_start=start,
         observation_end=as_of_date.isoformat(),
         sort_order="asc",
@@ -192,7 +193,7 @@ def load_observations(client, mode, as_of_date=None):
 
     cutoff = _parse_date(as_of_date)
 
-    if mode == "present" and cutoff != date.today():
+    if mode == "present" and cutoff != us_today():
         raise ValueError(
             "Present mode must use today's date"
         )

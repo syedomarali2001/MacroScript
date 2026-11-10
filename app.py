@@ -20,12 +20,14 @@ from pathlib import Path
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from streamlit.errors import StreamlitSecretNotFoundError
 from dotenv import load_dotenv
 
 from data_loader import load_observations
 from features import calculate_all_features, month_label, monthly_values
 from fred_client import FredClient
 from signals import RULES, is_warning
+from us_dates import us_today
 
 
 ROOT = Path(__file__).resolve().parent
@@ -322,10 +324,17 @@ def api_bundle(mode: str, as_of: str, api_key: str):
 
 
 def get_api_key():
-    key = os.getenv("FRED_API_KEY", "").strip()
-    if not key or key.lower().startswith("replace_"):
-        return None
-    return key
+    """Use Streamlit Cloud secrets when available, or local .env settings."""
+    try:
+        cloud_key = st.secrets.get("FRED_API_KEY")
+    except (FileNotFoundError, KeyError, StreamlitSecretNotFoundError):
+        cloud_key = None
+    for candidate in (cloud_key, os.getenv("FRED_API_KEY")):
+        if isinstance(candidate, str):
+            key = candidate.strip()
+            if key and not key.lower().startswith("replace_"):
+                return key
+    return None
 
 
 def snapshot_from_bundle(bundle):
@@ -648,13 +657,18 @@ def detail_table(snapshot):
 def load_selected_api(mode, as_of):
     key = get_api_key()
     if not key:
-        st.warning("FRED_API_KEY is missing or still a placeholder in V7/.env. You can still use the cached Time Machine and Research Lab.")
+        st.warning("FRED API key not configured. On Streamlit Cloud, set FRED_API_KEY in App settings > Secrets. Locally, add it to your private .env file.")
         return None
     with st.spinner("Retrieving and validating FRED / ALFRED observations..."):
         try:
             bundle = api_bundle(mode, as_of, key)
             if bundle.get("errors"):
-                st.warning(f"{len(bundle['errors'])} of 6 sources could not be retrieved. Unavailable data will not be filled in.")
+                failed = bundle["errors"]
+                st.warning(f"{len(failed)} of 6 FRED series could not be retrieved. Missing readings will not be filled in.")
+                # Show a concise, safe API error (never the URL or API key).
+                reasons = list(dict.fromkeys(str(message).replace(key, "[redacted]") for message in failed.values()))
+                if reasons:
+                    st.caption("FRED reported: " + "; ".join(reasons[:2])[:350])
             return bundle
         except Exception as exc:
             st.error(f"Economic data retrieval failed: {type(exc).__name__}: {exc}")
@@ -768,14 +782,14 @@ def today_view():
     hero("THE CURRENT PICTURE", "Today's U.S. economy",
          "A clear look at five economic indicators, what they mean, and how they have changed.")
     if not get_api_key():
-        st.warning("Add your FRED API key to the local .env file to view current readings. The Time Machine's saved dates work offline.")
+        st.warning("FRED API key not configured. In Streamlit Community Cloud, open the app's Settings > Secrets and add FRED_API_KEY. Locally, use a private .env file.")
         return
     _, refresh_col = st.columns([5, 1.6])
     with refresh_col:
         if st.button("↻ Refresh data", width="stretch", key="refresh_today"):
             api_bundle.clear()
             st.rerun()
-    bundle = load_selected_api("present", date.today().isoformat())
+    bundle = load_selected_api("present", us_today().isoformat())
     if bundle is None:
         return
     snapshot = snapshot_from_bundle(bundle)
@@ -843,7 +857,7 @@ def time_machine():
     a, b = st.columns([1.2, 2.4], gap="large")
     with a:
         selected = st.date_input("Choose a historical date", value=date(2007, 11, 30),
-                                 min_value=date(1959, 1, 1), max_value=date.today(),
+                                 min_value=date(1959, 1, 1), max_value=us_today(),
                                  key="tm_date")
     with b:
         st.markdown('<div class="ms-detail"><strong>Why historical dates matter</strong><div style="margin-top:.28rem">Economic figures are published gradually and can be revised. Looking at today’s numbers may misrepresent what people knew then.</div></div>', unsafe_allow_html=True)
@@ -858,7 +872,7 @@ def time_machine():
         st.markdown(f'<div class="ms-mini-title">As known on {text(requested)} · Saved historical snapshot</div>', unsafe_allow_html=True)
     else:
         if not get_api_key():
-            st.info("That date needs a historical data request. Add a FRED API key, or select a saved month-end date from 1999–2024.")
+            st.info("This date needs live ALFRED access. Set FRED_API_KEY in Streamlit Cloud Secrets (or in your local .env file). Saved month-end dates also require the local archive.")
             return
         if st.button("View this date", type="primary", key="load_tm"):
             st.session_state["tm_loaded_date"] = requested

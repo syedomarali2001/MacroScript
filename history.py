@@ -3,6 +3,8 @@
 
 import math
 from datetime import date
+
+from us_dates import us_today
 from decimal import Decimal
 
 from fred_client import FredError
@@ -35,7 +37,7 @@ def get_historical_series(client, series_id, as_of_date):
 
     as_of = date.fromisoformat(str(as_of_date))
 
-    if as_of > date.today():
+    if as_of > us_today():
         raise ValueError("Historical date cannot be in the future.")
 
     # Check for indicators that did not have a published vintage yet.
